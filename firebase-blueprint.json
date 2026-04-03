@@ -1,0 +1,74 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Informações do usuário e plano de assinatura.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "plan": { "type": "string", "enum": ["free", "pro"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "plan"]
+    },
+    "Case": {
+      "title": "Case",
+      "description": "Relato de abuso condominial e análise da IA.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "problemType": { "type": "string", "enum": ["multa", "abuso_sindico", "taxa_indevida", "outro"] },
+        "description": { "type": "string" },
+        "condoName": { "type": "string" },
+        "condoAddress": { "type": "string" },
+        "location": { "type": "string" },
+        "managerName": { "type": "string" },
+        "numApartments": { "type": "integer" },
+        "numTowers": { "type": "integer" },
+        "triedToResolve": { "type": "boolean" },
+        "severity": { "type": "string", "enum": ["baixo", "medio", "alto"] },
+        "diagnosis": { "type": "string" },
+        "rights": { "type": "string" },
+        "nextSteps": { "type": "string" },
+        "documents": {
+          "type": "object",
+          "properties": {
+            "notificacao": { "type": "string" },
+            "pedido": { "type": "string" },
+            "impugnacao": { "type": "string" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "problemType", "description", "condoName"]
+    },
+    "FAQ": {
+      "title": "FAQ",
+      "description": "Perguntas e respostas frequentes.",
+      "type": "object",
+      "properties": {
+        "question": { "type": "string" },
+        "answer": { "type": "string" },
+        "order": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["question", "answer"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Perfis de usuários."
+    },
+    "/cases/{caseId}": {
+      "schema": "Case",
+      "description": "Casos registrados pelos usuários."
+    },
+    "/faqs/{faqId}": {
+      "schema": "FAQ",
+      "description": "Banco de perguntas frequentes."
+    }
+  }
+}

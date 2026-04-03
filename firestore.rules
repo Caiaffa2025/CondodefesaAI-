@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+             (request.auth.token.email == "scaiaffa2014@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'plan']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.plan in ['free', 'pro'];
+    }
+
+    function isValidCase(data) {
+      return data.keys().hasAll(['userId', 'problemType', 'description', 'condoName', 'condoAddress', 'location', 'managerName', 'numApartments', 'numTowers', 'triedToResolve', 'severity', 'diagnosis', 'rights', 'nextSteps', 'documents', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.problemType in ['multa', 'abuso_sindico', 'taxa_indevida', 'outro'] &&
+             data.severity in ['baixo', 'medio', 'alto'] &&
+             data.description is string && data.description.size() < 10000 &&
+             data.condoName is string && data.condoName.size() < 500 &&
+             data.condoAddress is string && data.condoAddress.size() < 1000 &&
+             data.location is string && data.location.size() < 500 &&
+             data.managerName is string && data.managerName.size() < 500 &&
+             data.numApartments is int &&
+             data.numTowers is int &&
+             data.triedToResolve is bool &&
+             data.diagnosis is string &&
+             data.rights is string &&
+             data.nextSteps is string &&
+             data.documents is map &&
+             data.documents.keys().hasAll(['notificacao', 'pedido', 'impugnacao']) &&
+             (!('feedback' in data) || (
+               data.feedback.helpful is bool &&
+               (!('comment' in data.feedback) || (data.feedback.comment is string && data.feedback.comment.size() < 2000))
+             ));
+    }
+
+    function isValidFaq(data) {
+      return data.keys().hasAll(['question', 'answer']) &&
+             data.question is string && data.question.size() > 0 && data.question.size() < 500 &&
+             data.answer is string && data.answer.size() > 0 && data.answer.size() < 5000 &&
+             (!('order' in data) || data.order is int) &&
+             (!('createdAt' in data) || data.createdAt is string);
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data) && (isAdmin() || request.resource.data.plan == resource.data.plan);
+    }
+
+    // Cases collection
+    match /cases/{caseId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidCase(request.resource.data);
+      allow update: if isDocOwner() && isValidCase(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+
+    // FAQs collection
+    match /faqs/{faqId} {
+      allow read: if true; // Publicly readable
+      allow create: if isAdmin() && isValidFaq(request.resource.data);
+      allow update: if isAdmin() && isValidFaq(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}
