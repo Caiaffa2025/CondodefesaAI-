@@ -39,6 +39,7 @@ export default function AnalysisForm({ user, profile }: AnalysisFormProps) {
   
   const [formData, setFormData] = useState({
     problemType: 'multa',
+    customProblemType: '',
     description: '',
     condoName: '',
     condoAddress: '',
@@ -53,7 +54,10 @@ export default function AnalysisForm({ user, profile }: AnalysisFormProps) {
 
   const validateStep = (step: Step): boolean => {
     if (step === 1) {
-      return formData.description.length >= 20 && !!formData.problemType;
+      const isOther = formData.problemType === 'outro';
+      const isDescriptionValid = formData.description.length >= 20;
+      const isCustomTypeValid = !isOther || (formData.customProblemType && formData.customProblemType.length >= 3);
+      return isDescriptionValid && !!formData.problemType && isCustomTypeValid;
     }
     if (step === 2) {
       return !!formData.condoName && !!formData.condoAddress && !!formData.location;
@@ -132,7 +136,7 @@ export default function AnalysisForm({ user, profile }: AnalysisFormProps) {
       
       toast.success('Análise concluída com sucesso!');
 
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && profile?.notificationsEnabled !== false) {
         new Notification('Nova Análise Jurídica', {
           body: `Sua análise para o condomínio ${formData.condoName} está pronta!`,
           icon: '/favicon.ico'
@@ -258,17 +262,20 @@ export default function AnalysisForm({ user, profile }: AnalysisFormProps) {
               >
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Qual o tipo de problema?</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
                       { id: 'multa', label: 'Multa Injusta' },
                       { id: 'abuso_sindico', label: 'Abuso de Síndico' },
                       { id: 'taxa_indevida', label: 'Taxa Indevida' },
+                      { id: 'abuso_taxas', label: 'Abuso na Cobrança' },
+                      { id: 'vizinhanca', label: 'Vizinhança' },
+                      { id: 'obras_irregulares', label: 'Obras Irregulares' },
                       { id: 'outro', label: 'Outro' }
                     ].map((type) => (
                       <button
                         key={type.id}
                         type="button"
-                        onClick={() => setFormData({ ...formData, problemType: type.id })}
+                        onClick={() => setFormData({ ...formData, problemType: type.id as any })}
                         className={cn(
                           "px-4 py-3.5 rounded-2xl text-xs font-black border-2 transition-all text-center uppercase tracking-tight",
                           formData.problemType === type.id 
@@ -281,6 +288,37 @@ export default function AnalysisForm({ user, profile }: AnalysisFormProps) {
                     ))}
                   </div>
                 </div>
+
+                <AnimatePresence>
+                  {formData.problemType === 'outro' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-blue-600" />
+                        Especifique o problema *
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        value={formData.customProblemType}
+                        onBlur={() => setTouched({ ...touched, customProblemType: true })}
+                        onChange={(e) => setFormData({ ...formData, customProblemType: e.target.value })}
+                        placeholder="Ex: Problema com vaga de garagem"
+                        className={cn(
+                          "w-full px-5 py-4 rounded-2xl border bg-slate-50 focus:bg-white focus:ring-4 focus:ring-blue-600/10 focus:shadow-md outline-none transition-all font-bold text-slate-700",
+                          touched.customProblemType && (!formData.customProblemType || formData.customProblemType.length < 3) ? "border-red-300" : "border-slate-100 focus:border-blue-600"
+                        )}
+                      />
+                      {touched.customProblemType && (!formData.customProblemType || formData.customProblemType.length < 3) && (
+                        <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider mt-1">Mínimo 3 caracteres</p>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">

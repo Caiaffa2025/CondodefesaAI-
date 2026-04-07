@@ -4,34 +4,61 @@
  */
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from './lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { UserProfile } from './types';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import LandingPage from './components/LandingPage';
-import Dashboard from './components/Dashboard';
-import AnalysisForm from './components/AnalysisForm';
-import CaseDetail from './components/CaseDetail';
-import Support from './components/Support';
-import About from './components/About';
-import TermsOfUse from './components/TermsOfUse';
-import PrivacyPolicy from './components/PrivacyPolicy';
-import Quiz from './components/Quiz';
-import FineScanner from './components/FineScanner';
-import FinanceCalculator from './components/FinanceCalculator';
-import OccurrenceGenerator from './components/OccurrenceGenerator';
-import PreventiveAnalysis from './components/PreventiveAnalysis';
-import MyDocuments from './components/MyDocuments';
-import AdminDashboard from './components/AdminDashboard';
-import Protection from './components/Protection';
+// Lazy load components for better performance
+const LandingPage = lazy(() => import('./components/LandingPage'));
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const AnalysisForm = lazy(() => import('./components/AnalysisForm'));
+const CaseDetail = lazy(() => import('./components/CaseDetail'));
+const Support = lazy(() => import('./components/Support'));
+const About = lazy(() => import('./components/About'));
+const TermsOfUse = lazy(() => import('./components/TermsOfUse'));
+const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
+const Quiz = lazy(() => import('./components/Quiz'));
+const FAQ = lazy(() => import('./components/FAQ'));
+const FineScanner = lazy(() => import('./components/FineScanner'));
+const FinanceCalculator = lazy(() => import('./components/FinanceCalculator'));
+const OccurrenceGenerator = lazy(() => import('./components/OccurrenceGenerator'));
+const PreventiveAnalysis = lazy(() => import('./components/PreventiveAnalysis'));
+const MyDocuments = lazy(() => import('./components/MyDocuments'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+const Protection = lazy(() => import('./components/Protection'));
+
 import ScrollToTop from './components/ScrollToTop';
 import Navbar from './components/Navbar';
 import FloatingSupport from './components/FloatingSupport';
 import Footer from './components/Footer';
 import { Toaster } from 'sonner';
 import { onForegroundMessage } from './lib/notifications';
+
+// Create a client for React Query
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
+    },
+  },
+});
+
+// Loading Fallback Component
+const PageLoader = () => (
+  <div className="min-h-[60vh] flex flex-col items-center justify-center bg-slate-50/50 backdrop-blur-sm">
+    <div className="relative">
+      <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600"></div>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="h-8 w-8 bg-blue-100 rounded-full animate-pulse"></div>
+      </div>
+    </div>
+    <p className="mt-6 text-slate-500 font-black text-xs uppercase tracking-[0.2em] animate-pulse">Carregando plataforma...</p>
+  </div>
+);
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -77,8 +104,8 @@ export default function App() {
             // Create profile if it doesn't exist
             const newProfile: UserProfile = {
               uid: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              displayName: firebaseUser.displayName || 'Usuário',
+              email: firebaseUser.email || (firebaseUser.isAnonymous ? 'visitante@condodefesa.ai' : ''),
+              displayName: firebaseUser.displayName || (firebaseUser.isAnonymous ? 'Visitante' : 'Usuário'),
               plan: 'free',
               createdAt: new Date().toISOString()
             };
@@ -106,89 +133,109 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
+        <div className="relative mb-8">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="h-8 w-8 bg-blue-100 rounded-full animate-pulse"></div>
+          </div>
+        </div>
+        <h1 className="text-xl font-black text-slate-900 mb-2 tracking-tight">CondoDefesa AI</h1>
+        <p className="text-slate-500 font-medium mb-8 animate-pulse">Iniciando plataforma segura...</p>
+        
+        <button 
+          onClick={() => setLoading(false)}
+          className="text-xs font-black text-blue-600 uppercase tracking-widest hover:underline"
+        >
+          Demorando muito? Clique para forçar o carregamento
+        </button>
       </div>
     );
   }
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <Toaster position="top-right" richColors />
       <Router>
         <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
           <Navbar user={user} profile={profile} />
           <main className="flex-grow">
-            <Routes>
-              <Route path="/" element={<LandingPage user={user} />} />
-              <Route 
-                path="/dashboard" 
-                element={user ? <Dashboard user={user} profile={profile} /> : <Navigate to="/" />} 
-                />
-              <Route 
-                path="/analisar" 
-                element={user ? <AnalysisForm user={user} profile={profile} /> : <Navigate to="/" />} 
-                />
-              <Route 
-                path="/caso/:id" 
-                element={user ? <CaseDetail user={user} /> : <Navigate to="/" />} 
-                />
-              <Route 
-                path="/suporte" 
-                element={<Support />} 
-                />
-              <Route 
-                path="/sobre" 
-                element={<About />} 
-                />
-              <Route 
-                path="/termos" 
-                element={<TermsOfUse />} 
-                />
-              <Route 
-                path="/privacidade" 
-                element={<PrivacyPolicy />} 
-                />
-              <Route 
-                path="/quiz" 
-                element={<Quiz />} 
-                />
-              <Route 
-                path="/scanner" 
-                element={user ? <FineScanner /> : <Navigate to="/" />} 
-                />
-              <Route 
-                path="/calculadora" 
-                element={user ? <FinanceCalculator /> : <Navigate to="/" />} 
-                />
-              <Route 
-                path="/ata-digital" 
-                element={user ? <OccurrenceGenerator /> : <Navigate to="/" />} 
-                />
-              <Route 
-                path="/preventiva" 
-                element={user ? <PreventiveAnalysis profile={profile} /> : <Navigate to="/" />} 
-                />
-              <Route 
-                path="/documentos" 
-                element={user ? <MyDocuments profile={profile} onUpdateProfile={refreshProfile} /> : <Navigate to="/" />} 
-                />
-              <Route 
-                path="/admin" 
-                element={<AdminDashboard />} 
-                />
-              <Route 
-                path="/protecao" 
-                element={<Protection />} 
-                />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<LandingPage user={user} />} />
+                <Route 
+                  path="/dashboard" 
+                  element={user ? <Dashboard user={user} profile={profile} /> : <Navigate to="/" />} 
+                  />
+                <Route 
+                  path="/analisar" 
+                  element={user ? <AnalysisForm user={user} profile={profile} /> : <Navigate to="/" />} 
+                  />
+                <Route 
+                  path="/caso/:id" 
+                  element={user ? <CaseDetail user={user} /> : <Navigate to="/" />} 
+                  />
+                <Route 
+                  path="/suporte" 
+                  element={<Support />} 
+                  />
+                <Route 
+                  path="/sobre" 
+                  element={<About />} 
+                  />
+                <Route 
+                  path="/termos" 
+                  element={<TermsOfUse />} 
+                  />
+                <Route 
+                  path="/privacidade" 
+                  element={<PrivacyPolicy />} 
+                  />
+                <Route 
+                  path="/quiz" 
+                  element={<Quiz />} 
+                  />
+                <Route 
+                  path="/faq" 
+                  element={<FAQ />} 
+                  />
+                <Route 
+                  path="/scanner" 
+                  element={user ? <FineScanner /> : <Navigate to="/" />} 
+                  />
+                <Route 
+                  path="/calculadora" 
+                  element={user ? <FinanceCalculator /> : <Navigate to="/" />} 
+                  />
+                <Route 
+                  path="/ata-digital" 
+                  element={user ? <OccurrenceGenerator /> : <Navigate to="/" />} 
+                  />
+                <Route 
+                  path="/preventiva" 
+                  element={user ? <PreventiveAnalysis profile={profile} /> : <Navigate to="/" />} 
+                  />
+                <Route 
+                  path="/documentos" 
+                  element={user ? <MyDocuments profile={profile} onUpdateProfile={refreshProfile} /> : <Navigate to="/" />} 
+                  />
+                <Route 
+                  path="/admin" 
+                  element={<AdminDashboard />} 
+                  />
+                <Route 
+                  path="/protecao" 
+                  element={<Protection />} 
+                  />
+              </Routes>
+            </Suspense>
           </main>
           <ScrollToTop />
           <FloatingSupport />
           <Footer />
         </div>
       </Router>
-    </>
+    </QueryClientProvider>
   );
 }
 

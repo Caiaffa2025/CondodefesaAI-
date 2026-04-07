@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { User } from 'firebase/auth';
 import { UserProfile } from '../types';
-import { signInWithGoogle, logout } from '../lib/firebase';
+import { logout } from '../lib/firebase';
 import { toast } from 'sonner';
-import { Shield, LogOut, LayoutDashboard, Scale, HelpCircle, Menu, X, Trophy, Camera, ShieldCheck, FolderOpen, ArrowUpRight, ShieldAlert, Calculator, FileText, Key } from 'lucide-react';
+import { Shield, LogOut, LayoutDashboard, Scale, HelpCircle, Menu, X, Trophy, Camera, ShieldCheck, FolderOpen, ArrowUpRight, ShieldAlert, Calculator, FileText, Key, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import LoginModal from './LoginModal';
@@ -20,10 +20,11 @@ export default function Navbar({ user, profile }: NavbarProps) {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 768) {
+      if (window.innerWidth >= 1024) {
         setIsMenuOpen(false);
       }
     };
@@ -43,6 +44,8 @@ export default function Navbar({ user, profile }: NavbarProps) {
       document.title = `${baseTitle} | Analisar`;
     } else if (path === '/quiz') {
       document.title = `${baseTitle} | Quiz`;
+    } else if (path === '/faq') {
+      document.title = `${baseTitle} | FAQ`;
     } else if (path === '/scanner') {
       document.title = `${baseTitle} | Scanner de Multa`;
     } else if (path === '/calculadora') {
@@ -174,88 +177,117 @@ export default function Navbar({ user, profile }: NavbarProps) {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-4">
             {user ? (
               <>
                 <Link 
                   to="/dashboard" 
-                  className="text-slate-600 hover:text-blue-600 font-bold flex items-center gap-1 text-xs transition-colors"
+                  className={cn(
+                    "font-bold flex items-center gap-1.5 text-xs transition-colors px-3 py-2 rounded-lg",
+                    location.pathname === '/dashboard' ? "text-blue-600 bg-blue-50" : "text-slate-600 hover:text-blue-600 hover:bg-slate-50"
+                  )}
                 >
-                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <LayoutDashboard className="w-4 h-4" />
                   Dashboard
                 </Link>
-                <Link 
-                  to="/analisar" 
-                  className="relative group overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white px-4 py-2 rounded-xl font-black text-[11px] tracking-tight hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-[0_4px_20px_rgb(59,130,246,0.2)] hover:shadow-[0_4px_30px_rgb(59,130,246,0.4)] border border-white/10"
-                  title="Gerar documento jurídico"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
-                  <Scale className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
-                  <span>Nova Análise</span>
-                  <ArrowUpRight className="w-3 h-3 opacity-50 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                </Link>
-                <Link 
-                  to="/suporte" 
-                  className="text-slate-600 hover:text-blue-600 font-bold flex items-center gap-1 text-xs transition-colors"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                  Suporte
-                </Link>
+
+                <div className="relative">
+                  <button 
+                    onMouseEnter={() => setIsToolsOpen(true)}
+                    onClick={() => setIsToolsOpen(!isToolsOpen)}
+                    className={cn(
+                      "font-bold flex items-center gap-1.5 text-xs transition-colors px-3 py-2 rounded-lg",
+                      isToolsOpen ? "text-blue-600 bg-blue-50" : "text-slate-600 hover:text-blue-600 hover:bg-slate-50"
+                    )}
+                  >
+                    Ferramentas
+                    <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", isToolsOpen && "rotate-180")} />
+                  </button>
+
+                  <AnimatePresence>
+                    {isToolsOpen && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-0" 
+                          onMouseEnter={() => setIsToolsOpen(false)}
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          onMouseLeave={() => setIsToolsOpen(false)}
+                          className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-10"
+                        >
+                          <div className="grid grid-cols-1 gap-1">
+                            {[
+                              { to: '/scanner', icon: Camera, label: 'Scanner de Multa', desc: 'Analise fotos de multas' },
+                              { to: '/calculadora', icon: Calculator, label: 'Calculadora', desc: 'Juros e multas legais' },
+                              { to: '/ata-digital', icon: FileText, label: 'Ata Digital', desc: 'Registre ocorrências' },
+                              { to: '/preventiva', icon: ShieldCheck, label: 'Preventiva', desc: 'Audite sua convenção' },
+                              { to: '/documentos', icon: FolderOpen, label: 'Documentos', desc: 'Gerencie seus arquivos' },
+                              { to: '/protecao', icon: ShieldAlert, label: 'Proteção', desc: 'Direitos do condômino' },
+                            ].map((item) => (
+                              <Link
+                                key={item.to}
+                                to={item.to}
+                                onClick={() => setIsToolsOpen(false)}
+                                className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group"
+                              >
+                                <div className="bg-slate-50 p-2 rounded-lg group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                                  <item.icon className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="text-[11px] font-black text-slate-900 leading-none">{item.label}</p>
+                                  <p className="text-[9px] text-slate-400 mt-1">{item.desc}</p>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 <Link 
                   to="/quiz" 
-                  className="text-slate-600 hover:text-blue-600 font-bold flex items-center gap-1 text-xs transition-colors"
+                  className={cn(
+                    "font-bold flex items-center gap-1.5 text-xs transition-colors px-3 py-2 rounded-lg",
+                    location.pathname === '/quiz' ? "text-blue-600 bg-blue-50" : "text-slate-600 hover:text-blue-600 hover:bg-slate-50"
+                  )}
                 >
-                  <Trophy className="w-3.5 h-3.5" />
+                  <Trophy className="w-4 h-4" />
                   Quiz
                 </Link>
+
                 <Link 
-                  to="/scanner" 
-                  className="text-slate-400 hover:text-slate-600 font-bold flex items-center gap-1 text-xs transition-colors"
+                  to="/faq" 
+                  className={cn(
+                    "font-bold flex items-center gap-1.5 text-xs transition-colors px-3 py-2 rounded-lg",
+                    location.pathname === '/faq' ? "text-blue-600 bg-blue-50" : "text-slate-600 hover:text-blue-600 hover:bg-slate-50"
+                  )}
                 >
-                  <Camera className="w-3.5 h-3.5 opacity-70" />
-                  Scanner
+                  <HelpCircle className="w-4 h-4" />
+                  FAQ
                 </Link>
-                <Link 
-                  to="/calculadora" 
-                  className="text-slate-600 hover:text-blue-600 font-bold flex items-center gap-1 text-xs transition-colors"
-                >
-                  <Calculator className="w-3.5 h-3.5" />
-                  Calculadora
-                </Link>
-                <Link 
-                  to="/ata-digital" 
-                  className="text-slate-600 hover:text-blue-600 font-bold flex items-center gap-1 text-xs transition-colors"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  Ata
-                </Link>
-                <Link 
-                  to="/preventiva" 
-                  className="text-slate-600 hover:text-blue-600 font-bold flex items-center gap-1 text-xs transition-colors"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Preventiva
-                </Link>
-                <Link 
-                  to="/documentos" 
-                  className="text-slate-600 hover:text-blue-600 font-bold flex items-center gap-1 text-xs transition-colors"
-                >
-                  <FolderOpen className="w-3.5 h-3.5" />
-                  Docs
-                </Link>
-                <Link 
-                  to="/protecao" 
-                  className="text-slate-600 hover:text-blue-600 font-bold flex items-center gap-1 text-xs transition-colors"
-                >
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                  Proteção
-                </Link>
+
                 <Link 
                   to="/sobre" 
-                  className="text-slate-600 hover:text-blue-600 font-bold flex items-center gap-1 text-xs transition-colors"
+                  className={cn(
+                    "font-bold flex items-center gap-1.5 text-xs transition-colors px-3 py-2 rounded-lg",
+                    location.pathname === '/sobre' ? "text-blue-600 bg-blue-50" : "text-slate-600 hover:text-blue-600 hover:bg-slate-50"
+                  )}
                 >
-                  <Shield className="w-3.5 h-3.5" />
+                  <Shield className="w-4 h-4" />
                   Sobre
+                </Link>
+
+                <Link 
+                  to="/analisar" 
+                  className="relative group overflow-hidden bg-blue-600 text-white px-5 py-2.5 rounded-xl font-black text-[11px] tracking-tight hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-blue-100"
+                >
+                  <Scale className="w-4 h-4" />
+                  <span>Nova Análise</span>
                 </Link>
 
                 {hasAiStudio && !hasKey && (
@@ -264,13 +296,13 @@ export default function Navbar({ user, profile }: NavbarProps) {
                     className="bg-amber-50 text-amber-700 px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 border border-amber-200 hover:bg-amber-100 transition-all"
                   >
                     <Key className="w-4 h-4" />
-                    Configurar API
+                    API
                   </button>
                 )}
 
                 <button 
                   onClick={handleLogout}
-                  className="text-slate-500 hover:text-red-600 p-2"
+                  className="text-slate-400 hover:text-red-600 p-2 transition-colors"
                   title="Sair"
                 >
                   <LogOut className="w-5 h-5" />
@@ -279,7 +311,7 @@ export default function Navbar({ user, profile }: NavbarProps) {
             ) : (
               <button 
                 onClick={handleLogin}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all shadow-sm"
+                className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-black text-xs hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
               >
                 Entrar / Começar
               </button>
@@ -324,11 +356,15 @@ export default function Navbar({ user, profile }: NavbarProps) {
                     {/* User Profile Info */}
                     <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                       <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-100">
-                        {user.displayName?.[0] || 'U'}
+                        {user.isAnonymous ? 'V' : (user.displayName?.[0] || 'U')}
                       </div>
                       <div className="flex-grow min-w-0">
-                        <p className="font-black text-slate-900 truncate">{user.displayName}</p>
-                        <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                        <p className="font-black text-slate-900 truncate">
+                          {user.isAnonymous ? 'Visitante' : user.displayName}
+                        </p>
+                        <p className="text-xs text-slate-500 truncate">
+                          {user.isAnonymous ? 'Modo de Teste' : user.email}
+                        </p>
                       </div>
                     </div>
 
@@ -372,6 +408,7 @@ export default function Navbar({ user, profile }: NavbarProps) {
                         { to: '/documentos', icon: FolderOpen, label: 'Documentos' },
                         { to: '/protecao', icon: ShieldAlert, label: 'Proteção' },
                         { to: '/quiz', icon: Trophy, label: 'Quiz' },
+                        { to: '/faq', icon: HelpCircle, label: 'FAQ' },
                         { to: '/suporte', icon: HelpCircle, label: 'Suporte' },
                         { to: '/sobre', icon: Shield, label: 'Sobre Nós' },
                       ].map((item) => {
@@ -412,7 +449,7 @@ export default function Navbar({ user, profile }: NavbarProps) {
                       className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black shadow-xl shadow-blue-100 flex items-center justify-center gap-3"
                     >
                       <Shield className="w-6 h-6" />
-                      ENTRAR COM GOOGLE
+                      ENTRAR / CADASTRAR
                     </button>
                     <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-6">
                       Proteja seus direitos condominiais hoje

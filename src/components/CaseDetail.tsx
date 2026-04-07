@@ -17,6 +17,7 @@ import {
   Gavel, 
   Trash2,
   Printer,
+  Clock,
   PlusCircle,
   X,
   MessageCircle,
@@ -58,10 +59,14 @@ export default function CaseDetail({ user }: CaseDetailProps) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     typeof Notification !== 'undefined' && Notification.permission === 'granted'
   );
-  const [activeTab, setActiveTab] = useState<'diagnosis' | 'rights' | 'steps' | 'docs'>('diagnosis');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showSeverityTooltip, setShowSeverityTooltip] = useState(false);
+  const [activeTab, setActiveTab] = useState<'diagnosis' | 'rights' | 'steps' | 'docs' | 'report'>('diagnosis');
 
   const tabs = [
     { id: 'diagnosis', label: 'Diagnóstico', icon: ShieldCheck },
+    { id: 'report', label: 'Relatório', icon: FileCheck },
     { id: 'rights', label: 'Seus Direitos', icon: Gavel },
     { id: 'steps', label: 'Próximos Passos', icon: PlusCircle },
     { id: 'docs', label: 'Documentos', icon: FileText },
@@ -119,6 +124,29 @@ export default function CaseDetail({ user }: CaseDetailProps) {
     }
   };
 
+  const handleMarkResolved = async () => {
+    if (!id || !condoCase) return;
+    
+    const path = `cases/${id}`;
+    try {
+      await updateDoc(doc(db, 'cases', id), {
+        status: 'resolvido'
+      });
+      setCondoCase({ ...condoCase, status: 'resolvido' });
+      toast.success('Caso marcado como resolvido!');
+      
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && condoCase.notificationsEnabled !== false) {
+        new Notification('Caso Atualizado', {
+          body: `O status do caso ${condoCase.condoName} foi alterado para Resolvido.`,
+          icon: '/favicon.ico'
+        });
+      }
+    } catch (error) {
+      toast.error('Erro ao atualizar status.');
+      handleFirestoreError(error, OperationType.UPDATE, path);
+    }
+  };
+
   const handleFeedback = async (helpful: boolean) => {
     if (!id || !condoCase) return;
     
@@ -157,7 +185,8 @@ export default function CaseDetail({ user }: CaseDetailProps) {
   };
 
   const handleDelete = async () => {
-    if (!id || !window.confirm("Tem certeza que deseja excluir esta análise?")) return;
+    if (!id) return;
+    setIsDeleting(true);
     const path = `cases/${id}`;
     try {
       await deleteDoc(doc(db, 'cases', id));
@@ -166,6 +195,8 @@ export default function CaseDetail({ user }: CaseDetailProps) {
     } catch (error) {
       toast.error('Erro ao excluir análise.');
       handleFirestoreError(error, OperationType.DELETE, path);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -300,8 +331,26 @@ export default function CaseDetail({ user }: CaseDetailProps) {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-12 flex justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+      <div className="max-w-5xl mx-auto px-4 py-6 md:py-12 animate-pulse">
+        <div className="h-6 w-24 bg-slate-100 rounded mb-8"></div>
+        <div className="flex flex-col md:flex-row justify-between gap-6 mb-10">
+          <div className="space-y-3 flex-grow">
+            <div className="h-10 w-3/4 bg-slate-100 rounded-xl"></div>
+            <div className="h-4 w-1/2 bg-slate-100 rounded"></div>
+          </div>
+          <div className="flex gap-3">
+            <div className="h-12 w-40 bg-slate-100 rounded-xl"></div>
+            <div className="h-12 w-12 bg-slate-100 rounded-xl"></div>
+          </div>
+        </div>
+        <div className="h-14 w-full bg-slate-100 rounded-2xl mb-8"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            <div className="h-32 w-full bg-slate-100 rounded-3xl"></div>
+            <div className="h-64 w-full bg-slate-100 rounded-3xl"></div>
+          </div>
+          <div className="h-96 w-full bg-slate-100 rounded-3xl"></div>
+        </div>
       </div>
     );
   }
@@ -318,9 +367,13 @@ export default function CaseDetail({ user }: CaseDetailProps) {
       <div className="flex flex-col md:flex-row justify-between items-start gap-4 md:gap-6 mb-8 md:mb-10">
         <div className="w-full md:w-auto">
           <h1 className="text-2xl xs:text-3xl md:text-4xl font-black text-slate-900 mb-2 leading-tight">
-            {condoCase.problemType === 'multa' ? 'Análise de Multa Injusta' : 
+            {condoCase.problemType === 'outro' && condoCase.customProblemType ? `Análise de ${condoCase.customProblemType}` :
+             condoCase.problemType === 'multa' ? 'Análise de Multa Injusta' : 
              condoCase.problemType === 'abuso_sindico' ? 'Análise de Abuso de Síndico' :
-             condoCase.problemType === 'taxa_indevida' ? 'Análise de Taxa Indevida' : 'Análise de Caso'}
+             condoCase.problemType === 'taxa_indevida' ? 'Análise de Taxa Indevida' :
+             condoCase.problemType === 'abuso_taxas' ? 'Análise de Abuso na Cobrança de Taxas' :
+             condoCase.problemType === 'vizinhanca' ? 'Análise de Problemas com Vizinhança' :
+             condoCase.problemType === 'obras_irregulares' ? 'Análise de Obras Irregulares' : 'Análise de Caso'}
           </h1>
           <p className="text-xs sm:text-sm md:text-base text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
             <span className="text-blue-600 font-bold">{condoCase.condoName}</span>
@@ -348,7 +401,7 @@ export default function CaseDetail({ user }: CaseDetailProps) {
           </motion.button>
           
           <button 
-            onClick={handleDelete}
+            onClick={() => setShowDeleteConfirm(true)}
             className="flex-1 md:flex-none text-red-500 hover:text-red-700 px-4 sm:px-6 py-2.5 border border-red-100 rounded-xl hover:bg-red-50 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm font-bold"
           >
             <Trash2 className="w-4 h-4" />
@@ -419,6 +472,44 @@ export default function CaseDetail({ user }: CaseDetailProps) {
                           {condoCase.severity === 'alto' ? 'Alto Risco' : 
                            condoCase.severity === 'medio' ? 'Risco Médio' : 'Baixa Complexidade'}
                         </h3>
+                        
+                        <div className="relative inline-block">
+                          <button 
+                            onMouseEnter={() => setShowSeverityTooltip(true)}
+                            onMouseLeave={() => setShowSeverityTooltip(false)}
+                            onClick={() => setShowSeverityTooltip(!showSeverityTooltip)}
+                            className="p-1 text-slate-400 hover:text-blue-600 transition-colors focus:outline-none"
+                            aria-label="Informações sobre gravidade"
+                          >
+                            <Info className="w-4 h-4" />
+                          </button>
+                          <AnimatePresence>
+                            {showSeverityTooltip && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-72 p-5 bg-slate-900 text-white text-xs rounded-3xl shadow-2xl z-50 pointer-events-none"
+                              >
+                                <div className="space-y-4">
+                                  <div>
+                                    <p className="font-black text-emerald-400 mb-1 uppercase tracking-wider">Baixa Complexidade</p>
+                                    <p className="text-slate-300 leading-relaxed">Casos simples que podem ser resolvidos seguindo as orientações e passos sugeridos pela nossa IA.</p>
+                                  </div>
+                                  <div className="pt-3 border-t border-slate-800">
+                                    <p className="font-black text-yellow-400 mb-1 uppercase tracking-wider">Risco Médio</p>
+                                    <p className="text-slate-300 leading-relaxed">Casos que exigem atenção e podem ser endereçados utilizando os documentos de defesa gerados automaticamente.</p>
+                                  </div>
+                                  <div className="pt-3 border-t border-slate-800">
+                                    <p className="font-black text-red-400 mb-1 uppercase tracking-wider">Alto Risco</p>
+                                    <p className="text-slate-300 leading-relaxed">Casos críticos que podem exigir ação judicial imediata. Recomendamos consultar um especialista.</p>
+                                  </div>
+                                </div>
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       </div>
                       
                       {condoCase.severity === 'alto' ? (
@@ -457,6 +548,24 @@ export default function CaseDetail({ user }: CaseDetailProps) {
                     </div>
                   </section>
                 </div>
+              )}
+
+              {activeTab === 'report' && (
+                <section className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <FileCheck className="w-6 h-6 text-blue-600" />
+                    Relatório Jurídico Detalhado
+                  </h2>
+                  {condoCase.detailedReport ? (
+                    <div className="text-slate-700 leading-relaxed whitespace-pre-wrap text-lg">
+                      {condoCase.detailedReport}
+                    </div>
+                  ) : (
+                    <div className="p-6 bg-slate-50 rounded-2xl text-slate-500 italic text-center">
+                      Este caso foi analisado em uma versão anterior e não possui um relatório detalhado.
+                    </div>
+                  )}
+                </section>
               )}
 
               {activeTab === 'rights' && (
@@ -669,12 +778,22 @@ export default function CaseDetail({ user }: CaseDetailProps) {
               </div>
               <div className="flex justify-between items-center py-2 border-b border-slate-50">
                 <span className="text-sm text-slate-500">Status</span>
-                <span className={cn(
-                  "px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider",
-                  condoCase.status === 'resolvido' ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
-                )}>
-                  {condoCase.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider",
+                    condoCase.status === 'resolvido' ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+                  )}>
+                    {condoCase.status}
+                  </span>
+                  {condoCase.status !== 'resolvido' && (
+                    <button 
+                      onClick={handleMarkResolved}
+                      className="text-[10px] font-black text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Resolver
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-slate-50">
                 <span className="text-sm text-slate-500">Gravidade</span>
@@ -713,6 +832,50 @@ export default function CaseDetail({ user }: CaseDetailProps) {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden p-8 sm:p-10"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center text-red-600 mb-6">
+                  <Trash2 className="w-10 h-10" />
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Excluir Análise?</h3>
+                <p className="text-slate-500 mb-8 leading-relaxed">
+                  Esta ação não pode ser desfeita. Todos os documentos e o diagnóstico gerado para este caso serão removidos permanentemente.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 w-full">
+                  <button
+                    disabled={isDeleting}
+                    onClick={handleDelete}
+                    className="flex-1 bg-red-600 text-white py-4 rounded-2xl font-black hover:bg-red-700 transition-all shadow-xl shadow-red-100 flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {isDeleting ? (
+                      <Clock className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-5 h-5" />
+                    )}
+                    Sim, Excluir
+                  </button>
+                  <button
+                    disabled={isDeleting}
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-black hover:bg-slate-200 transition-all disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showPreviewModal && (

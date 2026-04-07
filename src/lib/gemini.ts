@@ -87,6 +87,7 @@ export interface AnalysisResult {
   diagnosis: string;
   rights: string;
   nextSteps: string;
+  detailedReport: string;
   documents: {
     notificacao: string;
     pedido: string;
@@ -124,16 +125,21 @@ export const analyzeCondoProblem = async (
     Sua tarefa é:
     1. Classificar a gravidade (baixo, medio, alto).
     2. Fornecer um diagnóstico claro do problema.
-    3. Listar os direitos do condômino com base no Código Civil Brasileiro e regras gerais.
+    3. Listar os direitos do condômino com base no Código Civil Brasileiro (Lei 10.406/02), na Lei do Condomínio (Lei 4.591/64) e outras normas pertinentes.
     4. Sugerir os próximos passos estratégicos.
-    5. Gerar modelos de 4 documentos:
-       - Notificação Extrajudicial
-       - Pedido Formal de Esclarecimentos
-       - Impugnação (se aplicável ao caso)
-       - Notificação de Inadimplência (adaptada para casos de inadimplência condominial, incluindo campos para o nome do condômino inadimplente, valor em atraso, data de vencimento, juros e multa aplicáveis, e um prazo para regularização)
+    5. Gerar um RELATÓRIO DETALHADO (detailedReport) que inclua:
+       - Contextualização jurídica do problema.
+       - Referências específicas a artigos da Lei 4.591/64 e do Código Civil.
+       - Análise de jurisprudência genérica (tendências dos tribunais para casos similares).
+       - Riscos de não agir e benefícios da resolução amigável vs. judicial.
+    6. Gerar modelos de 4 documentos COMPLETOS e DETALHADOS:
+       - Notificação Extrajudicial: Deve conter preâmbulo completo, fatos, fundamentos jurídicos (Lei 4.591/64 e Código Civil), pedidos claros e prazo para resposta.
+       - Pedido Formal de Esclarecimentos: Estruturado como um requerimento administrativo formal ao síndico/administradora.
+       - Impugnação: Um documento robusto contestando a irregularidade, com fundamentação legal sólida.
+       - Notificação de Inadimplência: Adaptada para casos de inadimplência condominial, incluindo campos para o nome do condômino inadimplente, valor em atraso, data de vencimento, juros e multa aplicáveis (limitados a 2% conforme Art. 1.336 do CC), e um prazo para regularização.
     
     IMPORTANTE: Deixe claro que esta é uma ferramenta informativa e não substitui um advogado.
-    Use uma linguagem profissional, mas acessível.
+    Use uma linguagem profissional, técnica e jurídica, mas acessível ao condômino.
   `;
 
   try {
@@ -149,6 +155,7 @@ export const analyzeCondoProblem = async (
             diagnosis: { type: Type.STRING },
             rights: { type: Type.STRING },
             nextSteps: { type: Type.STRING },
+            detailedReport: { type: Type.STRING },
             documents: {
               type: Type.OBJECT,
               properties: {
@@ -160,7 +167,7 @@ export const analyzeCondoProblem = async (
               required: ["notificacao", "pedido", "impugnacao", "notificacaoInadimplencia"]
             }
           },
-          required: ["severity", "diagnosis", "rights", "nextSteps", "documents"]
+          required: ["severity", "diagnosis", "rights", "nextSteps", "detailedReport", "documents"]
         }
       }
     });
@@ -236,11 +243,13 @@ export const scanFineImage = async (base64Data: string, mimeType: string): Promi
     
     Sua tarefa é:
     1. Extrair os dados principais (data, valor, motivo, nome do condomínio).
-    2. Determinar se a multa parece seguir os requisitos legais básicos (notificação prévia, direito de defesa, previsão em convenção).
-    3. Avaliar se ela pode ser contestada com base em erros comuns ou falta de fundamentação.
-    4. Fornecer uma análise detalhada e uma lista de argumentos para defesa.
+    2. Avaliar a legalidade da multa com base no Código Civil (Art. 1.336 e 1.337) e na Lei 4.591/64.
+    3. Verificar se houve o devido processo legal (direito de defesa, notificação prévia, previsão na convenção).
+    4. Fornecer uma análise detalhada, técnica e fundamentada.
+    5. Listar argumentos jurídicos sólidos para a defesa, citando artigos e princípios do direito condominial.
+    6. Determinar se a multa é passível de contestação.
     
-    IMPORTANTE: Esta é uma análise preliminar baseada em IA e não substitui um advogado.
+    IMPORTANTE: Esta é uma análise preliminar baseada em IA e não substitui um advogado. Use um tom profissional, técnico e encorajador.
   `;
 
   try {
@@ -321,13 +330,13 @@ export const analyzePreventiveDocument = async (base64Data: string, mimeType: st
     
     Sua tarefa é:
     1. Identificar cláusulas potencialmente abusivas, ilegais ou que contrariem o Código Civil Brasileiro (Lei 10.406/02) e a Lei do Condomínio (Lei 4.591/64).
-    2. Apontar riscos futuros para os condôminos (ex: multas desproporcionais, restrições de uso ilegais, falta de transparência).
-    3. Fornecer a base legal para cada risco identificado.
-    4. Dar recomendações de como o condômino deve agir ou propor alterações em assembleia.
+    2. Apontar riscos futuros para os condôminos (ex: multas desproporcionais, restrições de uso ilegais, falta de transparência, taxas abusivas).
+    3. Fornecer a base legal DETALHADA para cada risco identificado, citando artigos específicos.
+    4. Dar recomendações estratégicas e completas de como o condômino deve agir ou propor alterações em assembleia.
     
-    Retorne um resumo geral, uma lista detalhada de riscos e recomendações estratégicas.
+    Retorne um resumo geral robusto, uma lista detalhada de riscos e recomendações estratégicas em formato JSON.
     
-    IMPORTANTE: Esta é uma análise informativa baseada em IA e não substitui o parecer de um advogado.
+    IMPORTANTE: Esta é uma análise informativa baseada em IA e não substitui o parecer de um advogado. Use um tom técnico e profissional.
   `;
 
   try {
@@ -401,13 +410,13 @@ export const analyzePreventiveText = async (text: string): Promise<PreventiveAna
     
     Sua tarefa é:
     1. Identificar cláusulas potencialmente abusivas, ilegais ou que contrariem o Código Civil Brasileiro (Lei 10.406/02) e a Lei do Condomínio (Lei 4.591/64).
-    2. Apontar riscos futuros para os condôminos (ex: multas desproporcionais, restrições de uso ilegais, falta de transparência).
-    3. Fornecer a base legal para cada risco identificado.
-    4. Dar recomendações de como o condômino deve agir ou propor alterações em assembleia.
+    2. Apontar riscos futuros para os condôminos (ex: multas desproporcionais, restrições de uso ilegais, falta de transparência, taxas abusivas).
+    3. Fornecer a base legal DETALHADA para cada risco identificado, citando artigos específicos.
+    4. Dar recomendações estratégicas e completas de como o condômino deve agir ou propor alterações em assembleia.
     
-    Retorne um resumo geral, uma lista detalhada de riscos e recomendações estratégicas em formato JSON.
+    Retorne um resumo geral robusto, uma lista detalhada de riscos e recomendações estratégicas em formato JSON.
     
-    IMPORTANTE: Esta é uma análise informativa baseada em IA e não substitui o parecer de um advogado.
+    IMPORTANTE: Esta é uma análise informativa baseada em IA e não substitui o parecer de um advogado. Use um tom técnico e profissional.
   `;
 
   try {
@@ -472,7 +481,8 @@ export const generateOccurrenceReport = async (
   time: string,
   location: string,
   involvedParties: string,
-  evidence: string
+  evidence: string,
+  images?: { data: string; mimeType: string }[]
 ): Promise<OccurrenceReportResult> => {
   const ai = getAI();
   const prompt = `
@@ -487,20 +497,34 @@ export const generateOccurrenceReport = async (
     - Partes Envolvidas: ${involvedParties}
     - Descrição dos Fatos: ${description}
     - Evidências Mencionadas: ${evidence}
+    ${images && images.length > 0 ? `- Imagens Anexadas: Foram enviadas ${images.length} fotos como evidência. Analise-as se possível para complementar o relato.` : ''}
     
     O documento deve:
-    1. Ter um título formal.
-    2. Apresentar os fatos de forma clara, objetiva e impessoal.
-    3. Citar brevemente o embasamento legal ou normativo (Código Civil, Lei 4.591/64 ou Regimento Interno genérico).
-    4. Fornecer recomendações sobre como proceder após o registro.
+    1. Ter um título formal e profissional.
+    2. Apresentar os fatos de forma clara, objetiva, impessoal e cronológica.
+    3. Fornecer um EMBASAMENTO LEGAL COMPLETO (legalContext), citando artigos específicos do Código Civil (ex: Art. 1.331 a 1.358), da Lei 4.591/64 e princípios gerais do direito.
+    4. Fornecer recomendações estratégicas detalhadas sobre como proceder após o registro, incluindo prazos e possíveis desdobramentos.
     
-    Retorne o resultado no formato JSON especificado.
+    Retorne o resultado no formato JSON especificado, garantindo que o conteúdo seja robusto e formal.
   `;
 
   try {
+    const parts: any[] = [{ text: prompt }];
+    
+    if (images && images.length > 0) {
+      images.forEach(img => {
+        parts.push({
+          inlineData: {
+            data: img.data,
+            mimeType: img.mimeType
+          }
+        });
+      });
+    }
+
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: prompt,
+      contents: { parts },
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -570,11 +594,11 @@ export const analyzeFinanceLegality = async (
     - Juros moratórios: 1% ao mês (pro rata die), salvo se a convenção previr menos (assuma 1% como limite padrão legal se não houver convenção).
     
     Sua tarefa é:
-    1. Calcular a multa legal (2% do principal).
-    2. Calcular os juros legais (1% ao mês pro rata die entre o vencimento e o pagamento).
-    3. Comparar os valores cobrados com os limites legais.
-    4. Determinar se a cobrança é legal ou abusiva.
-    5. Fornecer uma análise detalhada e recomendações.
+    1. Calcular a multa legal (máximo 2% conforme Art. 1.336, § 1º do Código Civil).
+    2. Calcular os juros legais (máximo 1% ao mês pro rata die, conforme Art. 1.336, § 1º do Código Civil).
+    3. Comparar os valores cobrados com os limites legais e identificar abusividades.
+    4. Fornecer uma análise técnica, detalhada e fundamentada na Lei do Condomínio (Lei 4.591/64) e no Código Civil.
+    5. Fornecer recomendações estratégicas sobre como contestar valores indevidos ou regularizar a situação.
     
     Retorne os resultados no formato JSON especificado.
     totalCalculated deve ser a soma do principal + multa legal + juros legais.

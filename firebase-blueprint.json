@@ -1,24 +1,40 @@
 {
   "entities": {
-    "User": {
-      "title": "User",
-      "description": "Informações do usuário e plano de assinatura.",
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Information about a registered user and their condo documents.",
       "type": "object",
       "properties": {
-        "uid": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "displayName": { "type": "string" },
-        "plan": { "type": "string", "enum": ["free", "pro"] },
+        "uid": { "type": "string", "description": "The unique identifier for the user." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "displayName": { "type": "string", "description": "The user's display name." },
+        "plan": { "type": "string", "enum": ["free", "pro"], "description": "The user's subscription plan." },
+        "condoConvention": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "data": { "type": "string", "description": "Base64 encoded PDF data." },
+            "uploadedAt": { "type": "string", "format": "date-time" }
+          }
+        },
+        "internalRegulations": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "data": { "type": "string", "description": "Base64 encoded PDF data." },
+            "uploadedAt": { "type": "string", "format": "date-time" }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["uid", "email", "plan"]
+      "required": ["uid", "email", "displayName", "plan", "createdAt"]
     },
-    "Case": {
-      "title": "Case",
-      "description": "Relato de abuso condominial e análise da IA.",
+    "CondoCase": {
+      "title": "Condo Case",
+      "description": "A specific legal or administrative issue reported by a user.",
       "type": "object",
       "properties": {
-        "userId": { "type": "string" },
+        "userId": { "type": "string", "description": "The UID of the user who created the case." },
         "problemType": { "type": "string", "enum": ["multa", "abuso_sindico", "taxa_indevida", "outro"] },
         "description": { "type": "string" },
         "condoName": { "type": "string" },
@@ -32,21 +48,33 @@
         "diagnosis": { "type": "string" },
         "rights": { "type": "string" },
         "nextSteps": { "type": "string" },
+        "detailedReport": { "type": "string" },
         "documents": {
           "type": "object",
           "properties": {
             "notificacao": { "type": "string" },
             "pedido": { "type": "string" },
-            "impugnacao": { "type": "string" }
+            "impugnacao": { "type": "string" },
+            "notificacaoInadimplencia": { "type": "string" }
           }
         },
+        "feedback": {
+          "type": "object",
+          "properties": {
+            "helpful": { "type": "boolean" },
+            "comment": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" }
+          }
+        },
+        "notificationsEnabled": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["pendente", "resolvido"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["userId", "problemType", "description", "condoName"]
+      "required": ["userId", "problemType", "description", "condoName", "condoAddress", "location", "managerName", "numApartments", "numTowers", "triedToResolve", "severity", "diagnosis", "rights", "nextSteps", "createdAt"]
     },
     "FAQ": {
       "title": "FAQ",
-      "description": "Perguntas e respostas frequentes.",
+      "description": "Frequently Asked Question for the help center.",
       "type": "object",
       "properties": {
         "question": { "type": "string" },
@@ -54,21 +82,21 @@
         "order": { "type": "integer" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["question", "answer"]
+      "required": ["question", "answer", "createdAt"]
     }
   },
   "firestore": {
     "/users/{userId}": {
-      "schema": "User",
-      "description": "Perfis de usuários."
+      "schema": "UserProfile",
+      "description": "User profiles indexed by their Firebase Auth UID."
     },
     "/cases/{caseId}": {
-      "schema": "Case",
-      "description": "Casos registrados pelos usuários."
+      "schema": "CondoCase",
+      "description": "Condo cases created by users."
     },
     "/faqs/{faqId}": {
       "schema": "FAQ",
-      "description": "Banco de perguntas frequentes."
+      "description": "Global FAQs for the application."
     }
   }
 }

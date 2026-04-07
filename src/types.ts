@@ -13,13 +13,15 @@ export interface UserProfile {
     data: string; // base64
     uploadedAt: string;
   };
+  notificationsEnabled?: boolean;
   createdAt: string;
 }
 
 export interface CondoCase {
   id?: string;
   userId: string;
-  problemType: 'multa' | 'abuso_sindico' | 'taxa_indevida' | 'outro';
+  problemType: 'multa' | 'abuso_sindico' | 'taxa_indevida' | 'abuso_taxas' | 'vizinhanca' | 'obras_irregulares' | 'outro';
+  customProblemType?: string;
   description: string;
   condoName: string;
   condoAddress: string;
@@ -32,6 +34,7 @@ export interface CondoCase {
   diagnosis: string;
   rights: string;
   nextSteps: string;
+  detailedReport?: string;
   documents: {
     notificacao: string;
     pedido: string;
@@ -45,5 +48,13 @@ export interface CondoCase {
   };
   notificationsEnabled?: boolean;
   status?: 'pendente' | 'resolvido';
+  createdAt: string;
+}
+
+export interface FAQ {
+  id?: string;
+  question: string;
+  answer: string;
+  order?: number;
   createdAt: string;
 }

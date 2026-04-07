@@ -41,7 +41,7 @@ export default function PrivacyPolicy() {
                 Coletamos apenas os dados estritamente necessários para a prestação de nossos serviços:
               </p>
               <ul className="space-y-3 text-sm sm:text-base text-slate-600 list-disc pl-6">
-                <li><strong>Dados de Identificação:</strong> Nome e e-mail (via Google Login) para criação de conta.</li>
+                <li><strong>Dados de Identificação:</strong> Nome e e-mail para criação de conta.</li>
                 <li><strong>Dados do Caso:</strong> Informações sobre conflitos condominiais que você insere voluntariamente para análise da IA.</li>
                 <li><strong>Dados de Uso:</strong> Informações técnicas sobre como você interage com a plataforma para melhorias de performance.</li>
               </ul>

@@ -24,14 +24,18 @@ service cloud.firestore {
       return data.keys().hasAll(['uid', 'email', 'plan']) &&
              data.uid is string &&
              data.email is string &&
-             data.plan in ['free', 'pro'];
+             data.plan in ['free', 'pro'] &&
+             (!('notificationsEnabled' in data) || data.notificationsEnabled is bool);
     }
 
     function isValidCase(data) {
       return data.keys().hasAll(['userId', 'problemType', 'description', 'condoName', 'condoAddress', 'location', 'managerName', 'numApartments', 'numTowers', 'triedToResolve', 'severity', 'diagnosis', 'rights', 'nextSteps', 'documents', 'createdAt']) &&
              data.userId == request.auth.uid &&
-             data.problemType in ['multa', 'abuso_sindico', 'taxa_indevida', 'outro'] &&
+             data.problemType in ['multa', 'abuso_sindico', 'taxa_indevida', 'abuso_taxas', 'vizinhanca', 'obras_irregulares', 'outro'] &&
              data.severity in ['baixo', 'medio', 'alto'] &&
+             (!('status' in data) || data.status in ['pendente', 'resolvido']) &&
+             (!('notificationsEnabled' in data) || data.notificationsEnabled is bool) &&
+             (!('customProblemType' in data) || (data.customProblemType is string && data.customProblemType.size() < 500)) &&
              data.description is string && data.description.size() < 10000 &&
              data.condoName is string && data.condoName.size() < 500 &&
              data.condoAddress is string && data.condoAddress.size() < 1000 &&
@@ -43,8 +47,10 @@ service cloud.firestore {
              data.diagnosis is string &&
              data.rights is string &&
              data.nextSteps is string &&
+             (!('detailedReport' in data) || data.detailedReport is string) &&
              data.documents is map &&
              data.documents.keys().hasAll(['notificacao', 'pedido', 'impugnacao']) &&
+             (!('notificacaoInadimplencia' in data.documents) || data.documents.notificacaoInadimplencia is string) &&
              (!('feedback' in data) || (
                data.feedback.helpful is bool &&
                (!('comment' in data.feedback) || (data.feedback.comment is string && data.feedback.comment.size() < 2000))

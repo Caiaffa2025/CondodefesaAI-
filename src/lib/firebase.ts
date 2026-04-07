@@ -1,5 +1,13 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { 
+  getAuth, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInAnonymously,
+  signOut,
+  onAuthStateChanged,
+  updateProfile
+} from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, query, where, orderBy, addDoc, updateDoc, deleteDoc, getDocFromServer } from 'firebase/firestore';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -26,19 +34,35 @@ const messagingPromise = isSupported().then(supported => {
 });
 
 export const getMessagingInstance = () => messagingPromise;
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-export const signInWithGoogle = async () => {
+export const loginWithEmail = async (email: string, pass: string) => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
+    const result = await signInWithEmailAndPassword(auth, email, pass);
     return result.user;
   } catch (error: any) {
-    console.error("Error signing in with Google:", error);
-    let errorMessage = 'Erro ao entrar com o Google.';
-    if (error.code === 'auth/popup-blocked') errorMessage = 'Popup bloqueado pelo navegador.';
-    else if (error.code === 'auth/popup-closed-by-user') errorMessage = 'Login cancelado pelo usuário.';
-    throw new Error(errorMessage);
+    console.error("Error signing in with Email:", error);
+    throw error;
+  }
+};
+
+export const registerWithEmail = async (email: string, pass: string, displayName: string) => {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, pass);
+    await updateProfile(result.user, { displayName });
+    return result.user;
+  } catch (error: any) {
+    console.error("Error registering with Email:", error);
+    throw error;
+  }
+};
+
+export const loginAnonymously = async () => {
+  try {
+    const result = await signInAnonymously(auth);
+    return result.user;
+  } catch (error: any) {
+    console.error("Error signing in Anonymously:", error);
+    throw error;
   }
 };
 

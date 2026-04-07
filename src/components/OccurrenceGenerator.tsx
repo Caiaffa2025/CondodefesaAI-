@@ -69,7 +69,19 @@ export default function OccurrenceGenerator() {
 
     setLoading(true);
     try {
-      const evidenceWithImages = formData.evidence + (images.length > 0 ? `\n\nImagens anexadas: ${images.length} arquivo(s).` : '');
+      // Convert images to base64 for AI analysis
+      const imageParts = await Promise.all(images.map(async (img) => {
+        return new Promise<{ data: string; mimeType: string }>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = (reader.result as string).split(',')[1];
+            resolve({ data: base64, mimeType: img.file.type });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(img.file);
+        });
+      }));
+
       const report = await generateOccurrenceReport(
         formData.problemType,
         formData.description,
@@ -77,7 +89,8 @@ export default function OccurrenceGenerator() {
         formData.time,
         formData.location,
         formData.involvedParties,
-        evidenceWithImages
+        formData.evidence,
+        imageParts
       );
       setResult(report);
       setStep(4);
@@ -297,14 +310,16 @@ export default function OccurrenceGenerator() {
                         
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                           {images.map((img, idx) => (
-                            <div key={idx} className="relative group aspect-square rounded-2xl overflow-hidden border border-slate-200">
+                            <div key={idx} className="relative group aspect-square rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
                               <img src={img.preview} alt="Preview" className="w-full h-full object-cover" />
                               <button 
                                 onClick={() => removeImage(idx)}
-                                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-all z-10"
+                                title="Remover imagem"
                               >
                                 <CloseIcon className="w-3 h-3" />
                               </button>
+                              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                             </div>
                           ))}
                           <label className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all group">

@@ -27,7 +27,8 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-semibold mb-4">Links Úteis</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link to="/protecao" className="hover:text-white font-bold text-blue-400">Proteção Condominial</Link></li>
+              <li><Link to="/faq" className="hover:text-white font-bold text-blue-400">Perguntas Frequentes (FAQ)</Link></li>
+              <li><Link to="/protecao" className="hover:text-white">Proteção Condominial</Link></li>
               <li><Link to="/sobre" className="hover:text-white">Sobre Nós</Link></li>
               <li><Link to="/suporte" className="hover:text-white">Central de Ajuda</Link></li>
               <li><a href="https://wa.me/5511984937529" target="_blank" rel="noopener noreferrer" className="hover:text-white">WhatsApp Suporte</a></li>

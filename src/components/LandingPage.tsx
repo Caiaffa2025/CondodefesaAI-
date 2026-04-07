@@ -2,7 +2,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
 import { User } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
 import { Shield, CheckCircle, AlertTriangle, FileText, ArrowRight, Star, HelpCircle, Zap, Scale, Users, MessageSquare, Trophy } from 'lucide-react';
-import { signInWithGoogle } from '../lib/firebase';
+import { logout } from '../lib/firebase';
 import { toast } from 'sonner';
 import { useRef, useState, useEffect } from 'react';
 import { cn } from '../lib/utils';
@@ -114,7 +114,7 @@ export default function LandingPage({ user }: LandingPageProps) {
                 Justiça Condominial em Tempo Real
               </motion.div>
 
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tight text-slate-900 mb-6 leading-[1.05]">
+              <h1 className="text-3xl xs:text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-slate-900 mb-6 leading-[1.1] sm:leading-[1.05]">
                 Seu condomínio está <br className="hidden sm:block" />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">abusando de você?</span>
               </h1>
@@ -123,9 +123,9 @@ export default function LandingPage({ user }: LandingPageProps) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4, duration: 0.8 }}
-                className="text-red-600 font-black text-lg sm:text-xl md:text-2xl mb-4 px-4 tracking-tight"
+                className="text-red-600 font-black text-sm sm:text-xl md:text-2xl mb-6 px-4 tracking-tight uppercase"
               >
-                “O Serasa do condomínio Faz  análise, diagnóstico e defesa em minutos.”
+                “O Serasa do condomínio Faz análise, diagnóstico e defesa em minutos.”
               </motion.p>
 
               <motion.div
@@ -143,20 +143,20 @@ export default function LandingPage({ user }: LandingPageProps) {
                 } : { 
                   duration: 0.5 
                 }}
-                className="mb-8 px-4"
+                className="mb-10 px-4"
               >
                 <p className={cn(
                   "font-black text-lg sm:text-2xl md:text-3xl leading-tight uppercase tracking-tighter transition-colors duration-500",
                   isBlinking ? "text-red-600" : "text-blue-600"
                 )}>
                   CondodefesaAI Não é só um sistema<br className="hidden sm:block" />
-                  <span className={isBlinking ? "text-red-700" : "text-blue-700"}>
+                  <span className={cn("block mt-2", isBlinking ? "text-red-700" : "text-blue-700")}>
                     É sua proteção contra abusos. Criado exclusivamente para o condômino brasileiro.
                   </span>
                 </p>
               </motion.div>
 
-              <p className="text-lg sm:text-xl md:text-2xl text-slate-600 max-w-4xl mx-auto mb-12 leading-relaxed px-4 font-medium">
+              <p className="text-sm sm:text-xl md:text-2xl text-slate-600 max-w-4xl mx-auto mb-12 leading-relaxed px-6 font-medium">
                 Nossa IA jurídica analisa multas, taxas e abusos de síndicos em segundos, gerando documentos prontos para sua defesa imediata.
               </p>
 
@@ -165,15 +165,15 @@ export default function LandingPage({ user }: LandingPageProps) {
                   whileHover={{ scale: 1.05, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleCTA}
-                  className="w-full sm:w-auto bg-blue-600 text-white px-10 py-5 rounded-2xl font-black text-xl hover:bg-blue-700 transition-all shadow-xl flex items-center justify-center gap-3 group"
+                  className="w-full sm:w-auto bg-blue-600 text-white px-8 py-4 sm:px-10 sm:py-5 rounded-2xl font-black text-lg sm:text-xl hover:bg-blue-700 transition-all shadow-xl flex items-center justify-center gap-3 group"
                 >
                   Analisar meu caso agora
-                  <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-5 h-5 sm:w-6 h-6 group-hover:translate-x-1 transition-transform" />
                 </motion.button>
                 <motion.a 
                   whileHover={{ backgroundColor: "rgba(241, 245, 249, 1)" }}
                   href="#como-funciona"
-                  className="w-full sm:w-auto bg-slate-50 text-slate-700 px-10 py-5 rounded-2xl font-bold text-xl border border-slate-200 transition-all flex items-center justify-center"
+                  className="w-full sm:w-auto bg-slate-50 text-slate-700 px-8 py-4 sm:px-10 sm:py-5 rounded-2xl font-bold text-lg sm:text-xl border border-slate-200 transition-all flex items-center justify-center"
                 >
                   Ver como funciona
                 </motion.a>
@@ -343,26 +343,26 @@ export default function LandingPage({ user }: LandingPageProps) {
       {/* Quiz Section */}
       <section className="py-32 bg-white relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-br from-slate-900 to-blue-900 rounded-[2.5rem] sm:rounded-[4rem] p-8 sm:p-12 md:p-20 text-white relative overflow-hidden shadow-2xl">
+          <div className="bg-gradient-to-br from-slate-900 to-blue-900 rounded-[2rem] sm:rounded-[4rem] p-6 sm:p-12 md:p-20 text-white relative overflow-hidden shadow-2xl">
             <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-10 sm:gap-12 items-center">
               <div>
                 <motion.div 
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
-                  className="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold uppercase tracking-widest"
+                  className="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-[10px] sm:text-xs font-bold uppercase tracking-widest"
                 >
                   <Trophy className="w-3.5 h-3.5" />
                   Desafio de Conhecimento
                 </motion.div>
-                <h2 className="text-3xl sm:text-4xl md:text-6xl font-black mb-6 leading-tight">
+                <h2 className="text-2xl sm:text-4xl md:text-6xl font-black mb-6 leading-tight">
                   Você conhece seus direitos no condomínio?
                 </h2>
-                <p className="text-blue-100/70 text-base sm:text-lg md:text-xl mb-10 leading-relaxed">
+                <p className="text-blue-100/70 text-sm sm:text-lg md:text-xl mb-10 leading-relaxed">
                   Muitos moradores aceitam abusos por simples desconhecimento da lei. Teste seu nível de conhecimento agora com nosso quiz interativo e gratuito.
                 </p>
                 <Link
                   to="/quiz"
-                  className="inline-flex items-center gap-3 bg-white text-blue-900 px-8 sm:px-10 py-4 sm:py-5 rounded-2xl font-black text-lg sm:text-xl hover:bg-blue-50 transition-all shadow-xl hover:-translate-y-1 w-full sm:w-auto justify-center"
+                  className="inline-flex items-center gap-3 bg-white text-blue-900 px-6 sm:px-10 py-4 sm:py-5 rounded-2xl font-black text-base sm:text-xl hover:bg-blue-50 transition-all shadow-xl hover:-translate-y-1 w-full sm:w-auto justify-center"
                 >
                   Fazer o Quiz Grátis
                   <ArrowRight className="w-6 h-6" />
@@ -372,19 +372,19 @@ export default function LandingPage({ user }: LandingPageProps) {
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
                   whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-                  className="bg-white/10 backdrop-blur-xl p-6 sm:p-8 rounded-[2rem] sm:rounded-[3rem] border border-white/20 shadow-2xl"
+                  className="bg-white/10 backdrop-blur-xl p-5 sm:p-8 rounded-[1.5rem] sm:rounded-[3rem] border border-white/20 shadow-2xl"
                 >
-                  <div className="space-y-4 sm:space-y-6">
+                  <div className="space-y-3 sm:space-y-6">
                     {[
                       "Qual o quórum para obras voluptuárias?",
                       "O síndico pode ser destituído?",
                       "Qual o limite da multa por atraso?"
                     ].map((q, i) => (
-                      <div key={i} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 rounded-2xl border border-white/10">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-500 flex items-center justify-center font-black text-xs sm:text-sm shrink-0">
+                      <div key={i} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 rounded-xl sm:rounded-2xl border border-white/10">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-500 flex items-center justify-center font-black text-[10px] sm:text-sm shrink-0">
                           {i + 1}
                         </div>
-                        <span className="font-bold text-blue-50 text-sm sm:text-base">{q}</span>
+                        <span className="font-bold text-blue-50 text-xs sm:text-base">{q}</span>
                       </div>
                     ))}
                   </div>
@@ -491,16 +491,16 @@ export default function LandingPage({ user }: LandingPageProps) {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-8 leading-tight">Não deixe seus direitos <br /> serem pisoteados</h2>
-            <p className="text-yellow-300 font-black text-xl sm:text-2xl mb-12 uppercase tracking-widest italic">“Descubra seus direitos antes que seja tarde.”</p>
-            <p className="text-lg sm:text-xl md:text-2xl text-blue-100 mb-16 max-w-3xl mx-auto font-medium px-4">
+            <h2 className="text-2xl sm:text-5xl md:text-7xl font-black mb-8 leading-tight">Não deixe seus direitos <br /> serem pisoteados</h2>
+            <p className="text-yellow-300 font-black text-lg sm:text-2xl mb-12 uppercase tracking-widest italic">“Descubra seus direitos antes que seja tarde.”</p>
+            <p className="text-base sm:text-xl md:text-2xl text-blue-100 mb-16 max-w-3xl mx-auto font-medium px-6">
               Junte-se a centenas de condôminos que já equilibraram as forças no condomínio. O conhecimento é sua melhor arma.
             </p>
             <motion.button 
               whileHover={{ scale: 1.05, backgroundColor: "#ffffff", color: "#2563eb" }}
               whileTap={{ scale: 0.98 }}
               onClick={handleCTA}
-              className="bg-white text-blue-600 px-8 sm:px-12 py-5 sm:py-6 rounded-2xl sm:rounded-[2rem] font-black text-xl sm:text-2xl shadow-2xl transition-all w-full sm:w-auto"
+              className="bg-white text-blue-600 px-8 sm:px-12 py-4 sm:py-6 rounded-2xl sm:rounded-[2rem] font-black text-lg sm:text-2xl shadow-2xl transition-all w-full sm:w-auto"
             >
               Começar Agora Gratuitamente
             </motion.button>
