@@ -1,4 +1,4 @@
-import { Shield } from 'lucide-react';
+import { Shield, Github } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Footer() {
@@ -23,6 +23,25 @@ export default function Footer() {
               Sua plataforma inteligente de apoio ao condômino. 
               Tecnologia e informação jurídica para garantir seus direitos.
             </p>
+            <div className="mt-6 flex flex-col gap-3">
+              <a 
+                href="https://condodefesaai.netlify.app" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                🌐 condodefesaai.netlify.app
+              </a>
+              <a 
+                href="https://github.com/scaiaffa2014/condodefesa-ai" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-xs font-bold hover:text-white transition-colors"
+              >
+                <Github className="w-4 h-4" />
+                Repositório GitHub
+              </a>
+            </div>
           </div>
           <div>
             <h3 className="text-white font-semibold mb-4">Links Úteis</h3>
@@ -47,7 +66,7 @@ export default function Footer() {
         </div>
         <div className="border-t border-slate-800 pt-8 text-center text-xs">
           <p>© {new Date().getFullYear()} CondoDefesa AI. Todos os direitos reservados.</p>
-          <p className="mt-1 opacity-60">Agência Stc Mobile</p>
+          <p className="mt-1 font-bold text-slate-500">Agência Stc Mobile | Sydney Caiaffa</p>
         </div>
       </div>
     </footer>

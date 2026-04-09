@@ -20,7 +20,13 @@ import {
   ChevronRight,
   ChevronLeft,
   Info,
-  Check
+  Check,
+  Gavel,
+  Receipt,
+  Ban,
+  Users,
+  Hammer,
+  MoreHorizontal
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -177,6 +183,16 @@ export default function AnalysisForm({ user, profile }: AnalysisFormProps) {
     { id: 3, title: 'Gestão', icon: FileText },
   ];
 
+  const problemTypes = [
+    { id: 'multa', label: 'Multa Injusta', icon: ShieldAlert, description: 'Recebeu uma multa que considera indevida.' },
+    { id: 'abuso_sindico', label: 'Abuso de Síndico', icon: Gavel, description: 'Ações autoritárias ou irregulares da gestão.' },
+    { id: 'taxa_indevida', label: 'Taxa Indevida', icon: Receipt, description: 'Cobranças extras sem base legal ou assembleia.' },
+    { id: 'abuso_taxas', label: 'Abuso na Cobrança', icon: Ban, description: 'Juros abusivos ou métodos de cobrança ilegais.' },
+    { id: 'vizinhanca', label: 'Vizinhança', icon: Users, description: 'Barulho, infiltrações ou conflitos entre moradores.' },
+    { id: 'obras_irregulares', label: 'Obras Irregulares', icon: Hammer, description: 'Reformas sem ART/RRT ou em horários proibidos.' },
+    { id: 'outro', label: 'Outro', icon: MoreHorizontal, description: 'Outros problemas jurídicos condominiais.' }
+  ];
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 md:py-12">
       {/* Progress Indicator */}
@@ -239,7 +255,7 @@ export default function AnalysisForm({ user, profile }: AnalysisFormProps) {
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
                 <p className="text-sm font-medium">{error}</p>
               </div>
-              {error.includes('Chave de API') && (window as any).aistudio && (
+              {(error.includes('Chave de API') || error.includes('bloqueada') || error.includes('permissão')) && (window as any).aistudio && (
                 <button
                   type="button"
                   onClick={handleSelectApiKey}
@@ -262,28 +278,36 @@ export default function AnalysisForm({ user, profile }: AnalysisFormProps) {
               >
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Qual o tipo de problema?</label>
-                  <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                      { id: 'multa', label: 'Multa Injusta' },
-                      { id: 'abuso_sindico', label: 'Abuso de Síndico' },
-                      { id: 'taxa_indevida', label: 'Taxa Indevida' },
-                      { id: 'abuso_taxas', label: 'Abuso na Cobrança' },
-                      { id: 'vizinhanca', label: 'Vizinhança' },
-                      { id: 'obras_irregulares', label: 'Obras Irregulares' },
-                      { id: 'outro', label: 'Outro' }
-                    ].map((type) => (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {problemTypes.map((type) => (
                       <button
                         key={type.id}
                         type="button"
                         onClick={() => setFormData({ ...formData, problemType: type.id as any })}
                         className={cn(
-                          "px-4 py-3.5 rounded-2xl text-xs font-black border-2 transition-all text-center uppercase tracking-tight",
+                          "flex items-start gap-4 p-5 rounded-[2rem] border-2 transition-all text-left group",
                           formData.problemType === type.id 
-                            ? "border-blue-600 bg-blue-50 text-blue-700 shadow-md" 
-                            : "border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200"
+                            ? "border-blue-600 bg-blue-50 shadow-lg shadow-blue-100/50" 
+                            : "border-slate-100 bg-white hover:border-blue-200 hover:bg-slate-50"
                         )}
                       >
-                        {type.label}
+                        <div className={cn(
+                          "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors",
+                          formData.problemType === type.id ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600"
+                        )}>
+                          <type.icon className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className={cn(
+                            "font-black text-sm uppercase tracking-tight mb-1",
+                            formData.problemType === type.id ? "text-blue-700" : "text-slate-700"
+                          )}>
+                            {type.label}
+                          </p>
+                          <p className="text-[11px] text-slate-500 font-medium leading-tight">
+                            {type.description}
+                          </p>
+                        </div>
                       </button>
                     ))}
                   </div>

@@ -5,6 +5,9 @@ import { supportChat } from '../lib/gemini';
 import Markdown from 'react-markdown';
 import { cn } from '../lib/utils';
 
+import { User } from 'firebase/auth';
+import { UserProfile } from '../types';
+
 interface Message {
   role: 'user' | 'model';
   text: string;
@@ -13,11 +16,13 @@ interface Message {
 interface SupportChatWidgetProps {
   className?: string;
   isMini?: boolean;
+  user?: User | null;
+  profile?: UserProfile | null;
 }
 
-export default function SupportChatWidget({ className, isMini = false }: SupportChatWidgetProps) {
+export default function SupportChatWidget({ className, isMini = false, user, profile }: SupportChatWidgetProps) {
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'model', text: 'Olá! Sou o assistente de suporte da CondoDefesa AI. Como posso ajudar você hoje?' }
+    { role: 'model', text: `Olá${user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}! Sou o assistente de suporte da CondoDefesa AI. Como posso ajudar você hoje?` }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -54,14 +59,21 @@ export default function SupportChatWidget({ className, isMini = false }: Support
         parts: [{ text: m.text }]
       }));
       
-      const response = await supportChat(userMessage, history);
+      const response = await supportChat(userMessage, history, {
+        userName: user?.displayName || undefined,
+        userEmail: user?.email || undefined,
+        plan: profile?.plan
+      });
       setMessages(prev => [...prev, { role: 'model', text: response }]);
     } catch (error) {
       console.error("Support chat error", error);
       let errorMessage = 'Desculpe, tive um problema ao processar sua mensagem. Tente novamente em instantes.';
-      if (error instanceof Error && (error.message.includes('API key') || error.message.includes('Chave de API') || error.message.includes('Configurar API'))) {
+      
+      if (error instanceof Error) {
+        // If it's a known error message from handleGeminiError, use it
         errorMessage = error.message;
       }
+      
       setMessages(prev => [...prev, { role: 'model', text: errorMessage }]);
     } finally {
       setLoading(false);
@@ -114,7 +126,7 @@ export default function SupportChatWidget({ className, isMini = false }: Support
               >
                 <div className="markdown-body">
                   <Markdown>{m.text}</Markdown>
-                  {(m.text.includes('Chave de API') || m.text.includes('Configurar API')) && (window as any).aistudio && (
+                  {(m.text.includes('Chave de API') || m.text.includes('Configurar API') || m.text.includes('bloqueada') || m.text.includes('permissão')) && (window as any).aistudio && (
                     <button
                       type="button"
                       onClick={handleSelectApiKey}

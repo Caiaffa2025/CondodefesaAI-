@@ -163,6 +163,23 @@ export default function About() {
         </div>
       </section>
 
+      {/* Founder Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-full text-xs font-bold mb-8">
+            Idealização e Desenvolvimento
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-4">Sydney Caiaffa</h2>
+          <p className="text-slate-500 font-bold uppercase tracking-widest text-sm mb-8">Agência Stc Mobile</p>
+          <div className="max-w-2xl mx-auto text-slate-600 leading-relaxed">
+            <p>
+              Estrategista digital e desenvolvedor focado em soluções tecnológicas que geram impacto real na vida das pessoas. 
+              O CondoDefesa AI é o resultado da união entre tecnologia de ponta e a necessidade de justiça no ambiente condominial.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Call to Action */}
       <section className="py-20 bg-slate-900 text-white overflow-hidden relative">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/20 rounded-full blur-[100px] -mr-48 -mt-48" />

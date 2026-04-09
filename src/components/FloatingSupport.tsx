@@ -4,7 +4,15 @@ import { MessageCircle, X, MessageSquare, Phone, HelpCircle, BookOpen, ExternalL
 import { Link, useLocation } from 'react-router-dom';
 import SupportChatWidget from './SupportChatWidget';
 
-export default function FloatingSupport() {
+import { User } from 'firebase/auth';
+import { UserProfile } from '../types';
+
+interface FloatingSupportProps {
+  user?: User | null;
+  profile?: UserProfile | null;
+}
+
+export default function FloatingSupport({ user, profile }: FloatingSupportProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -100,7 +108,7 @@ export default function FloatingSupport() {
                     exit={{ x: 50, opacity: 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <SupportChatWidget isMini className="h-[450px]" />
+                    <SupportChatWidget isMini className="h-[450px]" user={user} profile={profile} />
                   </motion.div>
                 ) : (
                   <motion.div

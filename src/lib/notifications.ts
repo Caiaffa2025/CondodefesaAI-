@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 // Replace with your actual VAPID key from Firebase Console -> Project Settings -> Cloud Messaging
 // This is a public key.
-const VAPID_KEY = 'YOUR_PUBLIC_VAPID_KEY_HERE';
+const VAPID_KEY = 'BC_PLACEHOLDER_VAPID_KEY_FROM_FIREBASE_CONSOLE';
 
 export async function requestNotificationPermission(userId: string) {
   try {

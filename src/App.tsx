@@ -231,7 +231,7 @@ export default function App() {
             </Suspense>
           </main>
           <ScrollToTop />
-          <FloatingSupport />
+          <FloatingSupport user={user} profile={profile} />
           <Footer />
         </div>
       </Router>

@@ -4,27 +4,21 @@ import firebaseConfig from "../../firebase-applet-config.json";
 const getAI = () => {
   const isPlaceholder = (k: any) => !k || k === 'TODO_KEYHERE' || k === 'MY_GEMINI_API_KEY' || k === 'YOUR_API_KEY' || k === '';
 
-  // Try to get the key from multiple possible environment variable names
-  // We use a dynamic lookup to avoid Vite's static replacement if possible
   const getRuntimeKey = () => {
     if (typeof window === 'undefined') return null;
-    
     try {
-      // Check for process.env.GEMINI_API_KEY and process.env.API_KEY
-      // These might be injected by the platform at runtime
       const win = window as any;
       const k = win.process?.env?.GEMINI_API_KEY || 
                 win.process?.env?.API_KEY || 
                 win.GEMINI_API_KEY || 
                 win.API_KEY ||
-                win.aistudio?.apiKey; // Some versions might use this
+                win.aistudio?.apiKey;
       return isPlaceholder(k) ? null : k;
     } catch (e) {
       return null;
     }
   };
 
-  // Safe check for process.env variables which might not be defined by Vite
   const getBuildTimeKey = () => {
     try {
       // @ts-ignore
@@ -44,7 +38,7 @@ const getAI = () => {
     }
   };
 
-  const key = getRuntimeKey() || getBuildTimeKey() || getViteKey() || (isPlaceholder(firebaseConfig.apiKey) ? null : firebaseConfig.apiKey);
+  const key = getBuildTimeKey() || getRuntimeKey() || getViteKey() || (isPlaceholder(firebaseConfig.apiKey) ? null : firebaseConfig.apiKey);
   
   if (!key) {
     const isAiStudio = typeof window !== 'undefined' && (window as any).aistudio;
@@ -54,11 +48,7 @@ const getAI = () => {
     throw new Error(message);
   }
 
-  const genAI = new GoogleGenAI({ apiKey: key });
-
-  // Add a proxy to handle common API errors globally if possible, 
-  // but since we call methods directly, we'll wrap the calls or provide a helper.
-  return genAI;
+  return new GoogleGenAI({ apiKey: key });
 };
 
 const handleGeminiError = (err: any): never => {
@@ -67,8 +57,12 @@ const handleGeminiError = (err: any): never => {
   const errorString = typeof err === 'string' ? err : JSON.stringify(err);
   const errorMessage = err?.message || errorString;
 
-  if (errorString.includes('PERMISSION_DENIED') || errorString.includes('API_KEY_SERVICE_BLOCKED')) {
-    throw new Error("Sua chave de API do Gemini está bloqueada ou não tem permissão para este serviço. Por favor, clique em 'Configurar API' no topo da página e selecione uma chave válida de um projeto com faturamento ativo.");
+  if (
+    errorString.includes('PERMISSION_DENIED') || 
+    errorString.includes('API_KEY_SERVICE_BLOCKED') ||
+    errorString.includes('blocked')
+  ) {
+    throw new Error("Sua chave de API do Gemini está bloqueada ou não tem permissão para usar o serviço de IA. Verifique se o faturamento está ativo ou se a chave tem as restrições corretas.");
   }
 
   if (errorString.includes('quota') || errorString.includes('429')) {
@@ -108,6 +102,7 @@ export const analyzeCondoProblem = async (
   triedToResolve: boolean
 ): Promise<AnalysisResult> => {
   const ai = getAI();
+  
   const prompt = `
     Você é um assistente jurídico especializado em direito condominial brasileiro.
     Analise o seguinte problema relatado por um condômino:
@@ -151,7 +146,7 @@ export const analyzeCondoProblem = async (
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            severity: { type: Type.STRING, enum: ["baixo", "medio", "alto"] },
+            severity: { type: Type.STRING },
             diagnosis: { type: Type.STRING },
             rights: { type: Type.STRING },
             nextSteps: { type: Type.STRING },
@@ -171,51 +166,54 @@ export const analyzeCondoProblem = async (
         }
       }
     });
-
-    if (!response.text) {
-      throw new Error("A IA não retornou uma resposta válida. Por favor, tente novamente.");
-    }
-
-    try {
-      return JSON.parse(response.text);
-    } catch (e) {
-      console.error("Erro ao parsear JSON da IA:", response.text);
-      throw new Error("Erro ao processar a resposta da IA. O formato retornado é inválido.");
-    }
+    
+    const text = response.text;
+    if (!text) throw new Error("Resposta vazia da IA");
+    return JSON.parse(text);
   } catch (err) {
     return handleGeminiError(err);
   }
 };
 
-export const supportChat = async (message: string, history: { role: 'user' | 'model', parts: { text: string }[] }[]) => {
+export const supportChat = async (
+  message: string, 
+  history: { role: 'user' | 'model', parts: { text: string }[] }[],
+  context?: { userName?: string; userEmail?: string; plan?: string }
+) => {
   const ai = getAI();
   
-  // Gemini history must start with 'user' and alternate roles.
-  // Our initial message is from 'model', so we should skip it if it's the first one.
-  let chatHistory = history.slice(0, -1);
-  if (chatHistory.length > 0 && chatHistory[0].role === 'model') {
-    chatHistory = chatHistory.slice(1);
-  }
+  const systemInstruction = `Você é o assistente de suporte da CondoDefesa AI, um especialista empático e encorajador em direito condominial brasileiro. Sua missão é apoiar os usuários em momentos de conflito, oferecendo clareza e orientação.
 
-  try {
-    const chat = ai.chats.create({
-      model: "gemini-3-flash-preview",
-      config: {
-        systemInstruction: `Você é o assistente de suporte da CondoDefesa AI, um especialista empático e encorajador em direito condominial brasileiro. Sua missão é apoiar os usuários em momentos de conflito, oferecendo clareza e orientação.
+${context?.userName ? `Você está conversando com ${context.userName}.` : ''}
+${context?.plan ? `O usuário está no plano ${context.plan.toUpperCase()}.` : ''}
 
 Diretrizes:
 1. RECONHECIMENTO E EMPATIA: Antes de oferecer soluções, reconheça e valide o problema relatado pelo usuário de forma acolhedora.
 2. AVISO LEGAL PROEMINENTE: Em respostas longas ou orientações específicas, inicie a mensagem com um aviso claro: "⚠️ IMPORTANTE: Sou uma IA informativa e não substituo a consulta com um advogado especializado."
 3. ENCORAJAMENTO: Mantenha um tom profissional e motivador, mostrando que o usuário não está sozinho e que existem caminhos para resolver conflitos de forma justa.
-4. LIMITES: Ajude com o uso da plataforma e dúvidas gerais. Para casos complexos, sugira sempre o auxílio de um profissional jurídico.`,
+4. LIMITES: Ajude com o uso da plataforma e dúvidas gerais. Para casos complexos, sugira sempre o auxílio de um profissional jurídico.
+5. CONTEXTO DA PLATAFORMA: Se o usuário perguntar sobre informações na plataforma, explique que ele pode encontrar suas análises no Dashboard, usar a Calculadora para juros, o Scanner para multas e a Ata Digital para registros.`;
+
+  try {
+    // Google Generative AI requires the first message in history to be from 'user'
+    let chatHistory = history.map(h => ({
+      role: h.role,
+      parts: h.parts
+    }));
+
+    if (chatHistory.length > 0 && chatHistory[0].role === 'model') {
+      chatHistory = chatHistory.slice(1);
+    }
+
+    const chat = ai.chats.create({
+      model: "gemini-3-flash-preview",
+      config: {
+        systemInstruction
       },
-      history: chatHistory,
+      history: chatHistory
     });
 
-    const response = await chat.sendMessage({
-      message: message,
-    });
-
+    const response = await chat.sendMessage({ message });
     return response.text;
   } catch (err) {
     return handleGeminiError(err);
@@ -237,6 +235,7 @@ export interface FineScanResult {
 
 export const scanFineImage = async (base64Data: string, mimeType: string): Promise<FineScanResult> => {
   const ai = getAI();
+  
   const prompt = `
     Você é um especialista em direito condominial brasileiro. 
     Analise esta imagem de uma multa condominial.
@@ -255,19 +254,17 @@ export const scanFineImage = async (base64Data: string, mimeType: string): Promi
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              data: base64Data,
-              mimeType: mimeType,
-            },
+      contents: [
+        {
+          inlineData: {
+            data: base64Data,
+            mimeType: mimeType,
           },
-          {
-            text: prompt,
-          },
-        ]
-      },
+        },
+        {
+          text: prompt,
+        },
+      ],
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -295,17 +292,10 @@ export const scanFineImage = async (base64Data: string, mimeType: string): Promi
         }
       }
     });
-
-    if (!response.text) {
-      throw new Error("A IA não retornou uma resposta válida para a imagem.");
-    }
-
-    try {
-      return JSON.parse(response.text);
-    } catch (e) {
-      console.error("Erro ao parsear JSON da IA (Multa):", response.text);
-      throw new Error("Erro ao processar a análise da multa.");
-    }
+    
+    const text = response.text;
+    if (!text) throw new Error("Resposta vazia da IA");
+    return JSON.parse(text);
   } catch (err) {
     return handleGeminiError(err);
   }
@@ -324,6 +314,7 @@ export interface PreventiveAnalysisResult {
 
 export const analyzePreventiveDocument = async (base64Data: string, mimeType: string): Promise<PreventiveAnalysisResult> => {
   const ai = getAI();
+  
   const prompt = `
     Você é um advogado sênior especializado em compliance condominial e direito imobiliário brasileiro.
     Analise este documento (Convenção de Condomínio ou Regimento Interno).
@@ -342,19 +333,17 @@ export const analyzePreventiveDocument = async (base64Data: string, mimeType: st
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              data: base64Data,
-              mimeType: mimeType,
-            },
+      contents: [
+        {
+          inlineData: {
+            data: base64Data,
+            mimeType: mimeType,
           },
-          {
-            text: prompt,
-          },
-        ]
-      },
+        },
+        {
+          text: prompt,
+        },
+      ],
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -368,7 +357,7 @@ export const analyzePreventiveDocument = async (base64Data: string, mimeType: st
                 properties: {
                   title: { type: Type.STRING },
                   description: { type: Type.STRING },
-                  severity: { type: Type.STRING, enum: ["baixo", "medio", "alto"] },
+                  severity: { type: Type.STRING },
                   legalBasis: { type: Type.STRING }
                 },
                 required: ["title", "description", "severity", "legalBasis"]
@@ -383,17 +372,10 @@ export const analyzePreventiveDocument = async (base64Data: string, mimeType: st
         }
       }
     });
-
-    if (!response.text) {
-      throw new Error("A IA não retornou uma resposta válida para o documento.");
-    }
-
-    try {
-      return JSON.parse(response.text);
-    } catch (e) {
-      console.error("Erro ao parsear JSON da IA (Preventiva Doc):", response.text);
-      throw new Error("Erro ao processar a análise preventiva do documento.");
-    }
+    
+    const text = response.text;
+    if (!text) throw new Error("Resposta vazia da IA");
+    return JSON.parse(text);
   } catch (err) {
     return handleGeminiError(err);
   }
@@ -401,6 +383,7 @@ export const analyzePreventiveDocument = async (base64Data: string, mimeType: st
 
 export const analyzePreventiveText = async (text: string): Promise<PreventiveAnalysisResult> => {
   const ai = getAI();
+  
   const prompt = `
     Você é um advogado sênior especializado em compliance condominial e direito imobiliário brasileiro.
     Analise o seguinte texto de uma Convenção de Condomínio ou Regimento Interno.
@@ -436,7 +419,7 @@ export const analyzePreventiveText = async (text: string): Promise<PreventiveAna
                 properties: {
                   title: { type: Type.STRING },
                   description: { type: Type.STRING },
-                  severity: { type: Type.STRING, enum: ["baixo", "medio", "alto"] },
+                  severity: { type: Type.STRING },
                   legalBasis: { type: Type.STRING }
                 },
                 required: ["title", "description", "severity", "legalBasis"]
@@ -451,17 +434,10 @@ export const analyzePreventiveText = async (text: string): Promise<PreventiveAna
         }
       }
     });
-
-    if (!response.text) {
-      throw new Error("A IA não retornou uma resposta válida para o texto.");
-    }
-
-    try {
-      return JSON.parse(response.text);
-    } catch (e) {
-      console.error("Erro ao parsear JSON da IA (Preventiva Texto):", response.text);
-      throw new Error("Erro ao processar a análise preventiva do texto.");
-    }
+    
+    const resText = response.text;
+    if (!resText) throw new Error("Resposta vazia da IA");
+    return JSON.parse(resText);
   } catch (err) {
     return handleGeminiError(err);
   }
@@ -485,6 +461,7 @@ export const generateOccurrenceReport = async (
   images?: { data: string; mimeType: string }[]
 ): Promise<OccurrenceReportResult> => {
   const ai = getAI();
+  
   const prompt = `
     Você é um especialista em gestão condominial e direito civil brasileiro.
     Sua tarefa é gerar uma "Ata de Ocorrência" formal e estruturada para ser registrada no livro de ocorrências de um condomínio.
@@ -497,7 +474,6 @@ export const generateOccurrenceReport = async (
     - Partes Envolvidas: ${involvedParties}
     - Descrição dos Fatos: ${description}
     - Evidências Mencionadas: ${evidence}
-    ${images && images.length > 0 ? `- Imagens Anexadas: Foram enviadas ${images.length} fotos como evidência. Analise-as se possível para complementar o relato.` : ''}
     
     O documento deve:
     1. Ter um título formal e profissional.
@@ -505,15 +481,14 @@ export const generateOccurrenceReport = async (
     3. Fornecer um EMBASAMENTO LEGAL COMPLETO (legalContext), citando artigos específicos do Código Civil (ex: Art. 1.331 a 1.358), da Lei 4.591/64 e princípios gerais do direito.
     4. Fornecer recomendações estratégicas detalhadas sobre como proceder após o registro, incluindo prazos e possíveis desdobramentos.
     
-    Retorne o resultado no formato JSON especificado, garantindo que o conteúdo seja robusto e formal.
+    Retorne o resultado no formato JSON especificado.
   `;
 
   try {
-    const parts: any[] = [{ text: prompt }];
-    
+    const contents: any[] = [{ text: prompt }];
     if (images && images.length > 0) {
       images.forEach(img => {
-        parts.push({
+        contents.push({
           inlineData: {
             data: img.data,
             mimeType: img.mimeType
@@ -524,7 +499,7 @@ export const generateOccurrenceReport = async (
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: { parts },
+      contents,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -542,17 +517,10 @@ export const generateOccurrenceReport = async (
         }
       }
     });
-
-    if (!response.text) {
-      throw new Error("A IA não retornou uma resposta válida para a ocorrência.");
-    }
-
-    try {
-      return JSON.parse(response.text);
-    } catch (e) {
-      console.error("Erro ao parsear JSON da IA (Ocorrência):", response.text);
-      throw new Error("Erro ao gerar o relatório de ocorrência.");
-    }
+    
+    const resText = response.text;
+    if (!resText) throw new Error("Resposta vazia da IA");
+    return JSON.parse(resText);
   } catch (err) {
     return handleGeminiError(err);
   }
@@ -578,6 +546,7 @@ export const analyzeFinanceLegality = async (
   paymentDate: string
 ): Promise<FinanceAnalysisResult> => {
   const ai = getAI();
+  
   const prompt = `
     Você é um especialista em direito condominial e cálculos financeiros do Brasil.
     Analise a legalidade de uma cobrança de condomínio em atraso.
@@ -591,17 +560,16 @@ export const analyzeFinanceLegality = async (
     
     Regras do Código Civil Brasileiro (Art. 1.336, § 1º):
     - Multa máxima: 2% sobre o valor do débito.
-    - Juros moratórios: 1% ao mês (pro rata die), salvo se a convenção previr menos (assuma 1% como limite padrão legal se não houver convenção).
+    - Juros moratórios: 1% ao mês (pro rata die).
     
     Sua tarefa é:
-    1. Calcular a multa legal (máximo 2% conforme Art. 1.336, § 1º do Código Civil).
-    2. Calcular os juros legais (máximo 1% ao mês pro rata die, conforme Art. 1.336, § 1º do Código Civil).
+    1. Calcular a multa legal (máximo 2%).
+    2. Calcular os juros legais (máximo 1% ao mês pro rata die).
     3. Comparar os valores cobrados com os limites legais e identificar abusividades.
-    4. Fornecer uma análise técnica, detalhada e fundamentada na Lei do Condomínio (Lei 4.591/64) e no Código Civil.
-    5. Fornecer recomendações estratégicas sobre como contestar valores indevidos ou regularizar a situação.
+    4. Fornecer uma análise técnica e fundamentada.
+    5. Fornecer recomendações estratégicas.
     
     Retorne os resultados no formato JSON especificado.
-    totalCalculated deve ser a soma do principal + multa legal + juros legais.
   `;
 
   try {
@@ -627,17 +595,10 @@ export const analyzeFinanceLegality = async (
         }
       }
     });
-
-    if (!response.text) {
-      throw new Error("A IA não retornou uma resposta válida para a análise financeira.");
-    }
-
-    try {
-      return JSON.parse(response.text);
-    } catch (e) {
-      console.error("Erro ao parsear JSON da IA (Financeiro):", response.text);
-      throw new Error("Erro ao processar a análise financeira.");
-    }
+    
+    const resText = response.text;
+    if (!resText) throw new Error("Resposta vazia da IA");
+    return JSON.parse(resText);
   } catch (err) {
     return handleGeminiError(err);
   }

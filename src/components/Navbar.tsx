@@ -441,6 +441,13 @@ export default function Navbar({ user, profile }: NavbarProps) {
                       <LogOut className="w-5 h-5" />
                       ENCERRAR SESSÃO
                     </button>
+
+                    <div className="pt-4 text-center">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        Desenvolvido por Sydney Caiaffa
+                      </p>
+                      <p className="text-[8px] text-slate-300 mt-1">Agência Stc Mobile</p>
+                    </div>
                   </>
                 ) : (
                   <div className="py-4">
