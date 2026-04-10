@@ -2,7 +2,7 @@ export interface UserProfile {
   uid: string;
   email: string;
   displayName: string;
-  plan: 'free' | 'pro';
+  plan: 'free' | 'pro' | 'condo';
   condoConvention?: {
     name: string;
     data: string; // base64

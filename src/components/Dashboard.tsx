@@ -632,23 +632,23 @@ export default function Dashboard({ user, profile }: DashboardProps) {
           >
             <div className="relative z-10">
               <div className="inline-block px-2 py-1 bg-blue-600 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-widest mb-3">
-                Plano {profile?.plan === 'pro' ? 'PRO' : 'FREE'}
+                Plano {profile?.plan === 'pro' ? 'PRO' : profile?.plan === 'condo' ? 'CONDO' : 'FREE'}
               </div>
               <h3 className="text-base sm:text-lg font-black mb-1 tracking-tight">Status da Conta</h3>
               <p className="text-slate-400 text-[10px] sm:text-xs leading-tight mb-4">
                 {profile?.plan === 'pro' 
                   ? 'Acesso total e ilimitado.' 
+                  : profile?.plan === 'condo'
+                  ? 'Gestão preventiva completa.'
                   : 'Plano gratuito limitado.'}
               </p>
-              {profile?.plan !== 'pro' && (
-                <button 
-                  onClick={() => toast.info('O sistema de pagamentos será implementado em breve!')}
-                  className="w-full bg-white text-slate-900 py-2 rounded-xl font-black hover:bg-blue-50 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm"
-                >
-                  Fazer Upgrade
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </button>
-              )}
+              <Link 
+                to="/planos" 
+                className="w-full bg-white text-slate-900 py-2 rounded-xl font-black hover:bg-blue-50 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm"
+              >
+                {profile?.plan === 'free' ? 'Fazer Upgrade' : 'Ver Detalhes'}
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
             <ShieldCheck className="absolute -bottom-5 -right-5 w-20 h-20 sm:w-24 sm:h-24 text-white/5 group-hover:scale-110 transition-transform duration-500" />
           </motion.div>

@@ -4,7 +4,7 @@ import { User } from 'firebase/auth';
 import { UserProfile } from '../types';
 import { logout } from '../lib/firebase';
 import { toast } from 'sonner';
-import { Shield, LogOut, LayoutDashboard, Scale, HelpCircle, Menu, X, Trophy, Camera, ShieldCheck, FolderOpen, ArrowUpRight, ShieldAlert, Calculator, FileText, Key, ChevronDown } from 'lucide-react';
+import { Shield, LogOut, LayoutDashboard, Scale, HelpCircle, Menu, X, Trophy, Camera, ShieldCheck, FolderOpen, ArrowUpRight, ShieldAlert, Calculator, FileText, Key, ChevronDown, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import LoginModal from './LoginModal';
@@ -283,6 +283,17 @@ export default function Navbar({ user, profile }: NavbarProps) {
                 </Link>
 
                 <Link 
+                  to="/planos" 
+                  className={cn(
+                    "font-bold flex items-center gap-1.5 text-xs transition-colors px-3 py-2 rounded-lg",
+                    location.pathname === '/planos' ? "text-blue-600 bg-blue-50" : "text-slate-600 hover:text-blue-600 hover:bg-slate-50"
+                  )}
+                >
+                  <Star className="w-4 h-4" />
+                  Planos
+                </Link>
+
+                <Link 
                   to="/analisar" 
                   className="relative group overflow-hidden bg-blue-600 text-white px-5 py-2.5 rounded-xl font-black text-[11px] tracking-tight hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-blue-100"
                 >
@@ -410,6 +421,7 @@ export default function Navbar({ user, profile }: NavbarProps) {
                         { to: '/quiz', icon: Trophy, label: 'Quiz' },
                         { to: '/faq', icon: HelpCircle, label: 'FAQ' },
                         { to: '/suporte', icon: HelpCircle, label: 'Suporte' },
+                        { to: '/planos', icon: Star, label: 'Planos' },
                         { to: '/sobre', icon: Shield, label: 'Sobre Nós' },
                       ].map((item) => {
                         const Icon = item.icon;

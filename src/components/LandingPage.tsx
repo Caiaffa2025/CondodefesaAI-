@@ -1,12 +1,14 @@
 import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
 import { User } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
-import { Shield, CheckCircle, AlertTriangle, FileText, ArrowRight, Star, HelpCircle, Zap, Scale, Users, MessageSquare, Trophy } from 'lucide-react';
+import { Shield, CheckCircle, AlertTriangle, FileText, ArrowRight, Star, HelpCircle, Zap, Scale, Users, MessageSquare, Trophy, Building2 } from 'lucide-react';
 import { logout } from '../lib/firebase';
 import { toast } from 'sonner';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, lazy, Suspense } from 'react';
 import { cn } from '../lib/utils';
 import LoginModal from './LoginModal';
+
+const Pricing = lazy(() => import('./Pricing'));
 
 interface LandingPageProps {
   user: User | null;
@@ -433,6 +435,13 @@ export default function LandingPage({ user }: LandingPageProps) {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="planos" className="py-20 sm:py-32 bg-slate-50">
+        <Suspense fallback={<div className="h-96 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div></div>}>
+          <Pricing user={user} profile={null} />
+        </Suspense>
       </section>
 
       {/* FAQ - Clean & Functional */}

@@ -46,6 +46,7 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-semibold mb-4">Links Úteis</h3>
             <ul className="space-y-2 text-sm">
+              <li><Link to="/planos" className="hover:text-white font-black text-blue-400">Planos & Assinaturas</Link></li>
               <li><Link to="/faq" className="hover:text-white font-bold text-blue-400">Perguntas Frequentes (FAQ)</Link></li>
               <li><Link to="/protecao" className="hover:text-white">Proteção Condominial</Link></li>
               <li><Link to="/sobre" className="hover:text-white">Sobre Nós</Link></li>

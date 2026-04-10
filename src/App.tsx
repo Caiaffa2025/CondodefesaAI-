@@ -29,6 +29,7 @@ const PreventiveAnalysis = lazy(() => import('./components/PreventiveAnalysis'))
 const MyDocuments = lazy(() => import('./components/MyDocuments'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const Protection = lazy(() => import('./components/Protection'));
+const Pricing = lazy(() => import('./components/Pricing'));
 
 import ScrollToTop from './components/ScrollToTop';
 import Navbar from './components/Navbar';
@@ -226,6 +227,10 @@ export default function App() {
                 <Route 
                   path="/protecao" 
                   element={<Protection />} 
+                  />
+                <Route 
+                  path="/planos" 
+                  element={<Pricing user={user} profile={profile} onUpdateProfile={refreshProfile} />} 
                   />
               </Routes>
             </Suspense>
