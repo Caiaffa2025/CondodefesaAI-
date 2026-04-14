@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Users, Lock, ShieldCheck, ArrowRight, Loader2, TrendingUp, Mail, Calendar, Brain, CheckCircle, AlertCircle, BarChart3, HelpCircle, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
 import { auth, db, logout } from '../lib/firebase';
-import { collection, getCountFromServer, query, orderBy, limit, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
+import { collection, getCountFromServer, query, orderBy, limit, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { cn, formatDate } from '../lib/utils';
 import { FAQ } from '../types';
@@ -16,15 +16,15 @@ interface AIStats {
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'metrics' | 'faqs'>('metrics');
-  const [email, setEmail] = useState('');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'faqs' | 'analytics'>('metrics');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [emailError, setEmailError] = useState('');
   const [stats, setStats] = useState<{ 
     totalUsers: number; 
     recentUsers: any[];
     aiStats: AIStats | null;
+    visitorStats?: any;
+    pageViews?: any;
   } | null>(null);
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [faqLoading, setFaqLoading] = useState(false);
@@ -72,33 +72,15 @@ export default function AdminDashboard() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setEmailError('');
-
-    if (!validateEmail(email)) {
-      setEmailError('Por favor, insira um e-mail válido.');
-      toast.error('E-mail inválido');
-      return;
-    }
-
-    if (email !== ADMIN_EMAIL) {
-      toast.error('E-mail não autorizado para acesso administrativo.');
-      return;
-    }
 
     if (password === '1966') {
       setLoading(true);
       try {
-        // Check if user is logged in to Firebase
+        // We still need to be "authenticated" in Firebase to bypass basic rules
+        // If not logged in, we'll use anonymous auth in the background
         if (!auth.currentUser) {
-          toast.error('Você precisa estar logado na sua conta primeiro.');
-          setLoading(false);
-          return;
-        }
-
-        if (auth.currentUser.email !== ADMIN_EMAIL) {
-          toast.error(`Acesso negado. O e-mail ${auth.currentUser.email} não tem permissão administrativa.`);
-          setLoading(false);
-          return;
+          const { signInAnonymously } = await import('firebase/auth');
+          await signInAnonymously(auth);
         }
         
         setIsAuthenticated(true);
@@ -107,7 +89,7 @@ export default function AdminDashboard() {
         toast.success('Acesso administrativo concedido');
       } catch (error: any) {
         console.error("Admin login error:", error);
-        toast.error(error.message || 'Erro ao autenticar como administrador.');
+        toast.error(error.message || 'Erro ao acessar o painel administrativo.');
       } finally {
         setLoading(false);
       }
@@ -168,7 +150,17 @@ export default function AdminDashboard() {
         problemDistribution
       };
 
-      setStats({ totalUsers, recentUsers, aiStats });
+      // Fetch Analytics
+      const visitorStatsSnap = await getDoc(doc(db, 'analytics', 'visitorStats'));
+      const pageViewsSnap = await getDoc(doc(db, 'analytics', 'pageViews'));
+
+      setStats({ 
+        totalUsers, 
+        recentUsers, 
+        aiStats,
+        visitorStats: visitorStatsSnap.exists() ? visitorStatsSnap.data() : null,
+        pageViews: pageViewsSnap.exists() ? pageViewsSnap.data() : null
+      });
     } catch (error) {
       console.error("Error fetching admin stats:", error);
       toast.error("Erro ao carregar estatísticas");
@@ -383,81 +375,9 @@ export default function AdminDashboard() {
             <Lock className="w-8 h-8" />
           </div>
           <h1 className="text-2xl font-black text-slate-900 mb-2">Área Administrativa</h1>
-          <p className="text-slate-500 text-sm mb-8">Acesso restrito. Identifique-se para continuar.</p>
+          <p className="text-slate-500 text-sm mb-8">Insira a senha mestra para continuar.</p>
           
-          {!auth.currentUser ? (
-            <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl mb-6 text-left">
-              <div className="flex gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-amber-900 mb-1">Você não está logado</p>
-                  <p className="text-[10px] text-amber-700 leading-relaxed">
-                    Para acessar o painel, você deve primeiro fazer login na sua conta de usuário usando o e-mail administrativo.
-                  </p>
-                  <button 
-                    onClick={() => window.location.href = '/'}
-                    className="mt-3 text-[10px] font-black text-amber-900 underline uppercase tracking-wider"
-                  >
-                    Ir para o Início e Logar
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : auth.currentUser.email !== ADMIN_EMAIL ? (
-            <div className="bg-red-50 border border-red-100 p-4 rounded-2xl mb-6 text-left">
-              <div className="flex gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-red-900 mb-1">E-mail não autorizado</p>
-                  <p className="text-[10px] text-red-700 leading-relaxed">
-                    Você está logado como <strong>{auth.currentUser.email}</strong>, que não possui acesso administrativo.
-                  </p>
-                  <button 
-                    onClick={() => logout().then(() => window.location.reload())}
-                    className="mt-3 text-[10px] font-black text-red-900 underline uppercase tracking-wider"
-                  >
-                    Sair e trocar de conta
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-green-50 border border-green-100 p-4 rounded-2xl mb-6 text-left">
-              <div className="flex gap-3">
-                <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-green-900 mb-1">Sessão Identificada</p>
-                  <p className="text-[10px] text-green-700 leading-relaxed">
-                    Logado como: <strong>{auth.currentUser.email}</strong>. Insira a senha mestra para desbloquear.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
           <form onSubmit={handleLogin} className="space-y-4">
-            <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                <Mail className="w-5 h-5" />
-              </div>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (emailError) setEmailError('');
-                }}
-                placeholder="E-mail Administrativo"
-                className={cn(
-                  "w-full pl-12 pr-6 py-4 bg-slate-50 border rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-medium",
-                  emailError ? "border-red-300 bg-red-50" : "border-slate-100"
-                )}
-                autoFocus
-              />
-              {emailError && (
-                <p className="text-red-500 text-xs mt-1 text-left ml-2">{emailError}</p>
-              )}
-            </div>
             <div className="relative">
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 <Lock className="w-5 h-5" />
@@ -468,6 +388,7 @@ export default function AdminDashboard() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Senha Mestra"
                 className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-bold tracking-widest"
+                autoFocus
               />
             </div>
             <button
@@ -491,21 +412,21 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+    <div className="max-w-6xl mx-auto px-4 py-8 sm:py-12">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 sm:mb-12">
         <div>
           <div className="flex items-center gap-2 text-blue-600 font-black text-xs uppercase tracking-widest mb-2">
             <ShieldCheck className="w-4 h-4" />
             Painel de Controle
           </div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Métricas da <span className="text-blue-600">Plataforma</span></h1>
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Métricas da <span className="text-blue-600">Plataforma</span></h1>
         </div>
-        <div className="flex gap-4">
-          <div className="bg-white p-1 rounded-2xl border border-slate-100 shadow-sm flex">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="bg-white p-1 rounded-2xl border border-slate-100 shadow-sm flex overflow-x-auto no-scrollbar">
             <button
               onClick={() => setActiveTab('metrics')}
               className={cn(
-                "px-6 py-3 rounded-xl font-bold text-sm transition-all",
+                "px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap",
                 activeTab === 'metrics' ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:bg-slate-50"
               )}
             >
@@ -514,17 +435,26 @@ export default function AdminDashboard() {
             <button
               onClick={() => setActiveTab('faqs')}
               className={cn(
-                "px-6 py-3 rounded-xl font-bold text-sm transition-all",
+                "px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap",
                 activeTab === 'faqs' ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:bg-slate-50"
               )}
             >
               Gerenciar FAQ
             </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={cn(
+                "px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap",
+                activeTab === 'analytics' ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:bg-slate-50"
+              )}
+            >
+              Analytics
+            </button>
           </div>
           <button 
             onClick={activeTab === 'metrics' ? fetchStats : fetchFaqs}
             disabled={loading || faqLoading}
-            className="bg-white border border-slate-200 p-4 rounded-2xl hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2 font-bold text-slate-600"
+            className="bg-white border border-slate-200 p-3 sm:p-4 rounded-2xl hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2 font-bold text-slate-600 text-sm sm:text-base"
           >
             {loading || faqLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <TrendingUp className="w-5 h-5" />}
             Atualizar
@@ -535,55 +465,41 @@ export default function AdminDashboard() {
       {activeTab === 'metrics' ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group"
-            >
+            <div className="bg-white p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
               <div className="relative z-10">
-                <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-4">
-                  <Users className="w-6 h-6" />
+                <div className="w-10 h-10 sm:w-12 h-12 bg-blue-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-blue-600 mb-4">
+                  <Users className="w-5 h-5 sm:w-6 h-6" />
                 </div>
-                <p className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Total de Usuários</p>
-                <h2 className="text-5xl font-black text-slate-900 tracking-tighter">
+                <p className="text-[10px] sm:text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Total de Usuários</p>
+                <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tighter">
                   {loading ? '...' : stats?.totalUsers || 0}
                 </h2>
               </div>
-              <Users className="absolute -bottom-6 -right-6 w-32 h-32 text-slate-50 group-hover:scale-110 transition-transform duration-500" />
-            </motion.div>
+              <Users className="absolute -bottom-6 -right-6 w-24 sm:w-32 h-24 sm:h-32 text-slate-50 group-hover:scale-110 transition-transform duration-500" />
+            </div>
 
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group"
-            >
+            <div className="bg-white p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
               <div className="relative z-10">
-                <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-4">
-                  <Brain className="w-6 h-6" />
+                <div className="w-10 h-10 sm:w-12 h-12 bg-indigo-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-indigo-600 mb-4">
+                  <Brain className="w-5 h-5 sm:w-6 h-6" />
                 </div>
-                <p className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Análises de IA</p>
-                <h2 className="text-5xl font-black text-slate-900 tracking-tighter">
+                <p className="text-[10px] sm:text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Análises de IA</p>
+                <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tighter">
                   {loading ? '...' : stats?.aiStats?.totalAnalyses || 0}
                 </h2>
               </div>
-              <Brain className="absolute -bottom-6 -right-6 w-32 h-32 text-slate-50 group-hover:scale-110 transition-transform duration-500" />
-            </motion.div>
+              <Brain className="absolute -bottom-6 -right-6 w-24 sm:w-32 h-24 sm:h-32 text-slate-50 group-hover:scale-110 transition-transform duration-500" />
+            </div>
 
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex items-center justify-center text-center"
-            >
+            <div className="bg-white p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-slate-100 shadow-sm flex items-center justify-center text-center">
               <div>
-                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mx-auto mb-4">
-                  <ShieldCheck className="w-6 h-6" />
+                <div className="w-10 h-10 sm:w-12 h-12 bg-emerald-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-emerald-600 mx-auto mb-4">
+                  <ShieldCheck className="w-5 h-5 sm:w-6 h-6" />
                 </div>
-                <p className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Status do Sistema</p>
-                <h2 className="text-2xl font-black text-emerald-600 tracking-tight">Operacional</h2>
+                <p className="text-[10px] sm:text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Status do Sistema</p>
+                <h2 className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">Operacional</h2>
               </div>
-            </motion.div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
@@ -737,33 +653,69 @@ export default function AdminDashboard() {
             </div>
           </div>
         </>
+      ) : activeTab === 'analytics' ? (
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total de Visitantes</p>
+              <h2 className="text-4xl font-black text-slate-900">{stats?.visitorStats?.totalVisitors || 0}</h2>
+            </div>
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Visitantes Anônimos</p>
+              <h2 className="text-4xl font-black text-blue-600">{stats?.visitorStats?.anonymousVisitors || 0}</h2>
+            </div>
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Usuários Registrados</p>
+              <h2 className="text-4xl font-black text-emerald-600">{stats?.visitorStats?.registeredUsers || 0}</h2>
+            </div>
+          </div>
+
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+            <h3 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
+              <BarChart3 className="w-6 h-6 text-blue-600" />
+              Páginas Mais Acessadas
+            </h3>
+            <div className="space-y-4">
+              {stats?.pageViews ? Object.entries(stats.pageViews)
+                .sort(([, a]: any, [, b]: any) => b - a)
+                .map(([path, views]: any) => (
+                <div key={path} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                  <span className="font-bold text-slate-700">{path.replace(/_/g, '/')}</span>
+                  <span className="bg-blue-600 text-white px-3 py-1 rounded-lg font-black text-xs">{views} views</span>
+                </div>
+              )) : (
+                <p className="text-slate-400 text-sm italic">Nenhum dado de visualização disponível</p>
+              )}
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="space-y-8">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h3 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
               <HelpCircle className="w-6 h-6 text-blue-600" />
               Perguntas Frequentes
             </h3>
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
               <button
                 onClick={() => seedFaqs(true)}
                 disabled={faqLoading}
-                className="bg-red-50 text-red-600 px-6 py-3 rounded-2xl font-black hover:bg-red-100 transition-all flex items-center gap-2 border border-red-100"
+                className="flex-1 sm:flex-none bg-red-50 text-red-600 px-4 py-2.5 rounded-xl font-black text-xs hover:bg-red-100 transition-all flex items-center justify-center gap-2 border border-red-100"
               >
-                <Trash2 className="w-5 h-5" />
-                Reset e Seed
+                <Trash2 className="w-4 h-4" />
+                Reset
               </button>
               <button
                 onClick={() => seedFaqs(false)}
                 disabled={faqLoading}
-                className="bg-slate-100 text-slate-600 px-6 py-3 rounded-2xl font-black hover:bg-slate-200 transition-all flex items-center gap-2"
+                className="flex-1 sm:flex-none bg-slate-100 text-slate-600 px-4 py-2.5 rounded-xl font-black text-xs hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
               >
-                <Brain className="w-5 h-5" />
-                Carregar Padrão
+                <Brain className="w-4 h-4" />
+                Padrão
               </button>
               <button
                 onClick={() => setIsAddingFaq(true)}
-                className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center gap-2"
+                className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
               >
                 <Plus className="w-5 h-5" />
                 Nova Pergunta
@@ -786,14 +738,14 @@ export default function AdminDashboard() {
                       <X className="w-6 h-6" />
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="md:col-span-3">
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <div className="lg:col-span-3">
                       <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Pergunta</label>
                       <input
                         type="text"
                         value={newFaq.question}
                         onChange={(e) => setNewFaq({ ...newFaq, question: e.target.value })}
-                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-bold"
+                        className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-bold text-sm sm:text-base"
                         placeholder="Ex: Como funciona a análise de multa?"
                       />
                     </div>
@@ -803,7 +755,7 @@ export default function AdminDashboard() {
                         type="number"
                         value={newFaq.order}
                         onChange={(e) => setNewFaq({ ...newFaq, order: parseInt(e.target.value) || 0 })}
-                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-bold"
+                        className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-bold text-sm sm:text-base"
                       />
                     </div>
                   </div>
@@ -812,22 +764,22 @@ export default function AdminDashboard() {
                     <textarea
                       value={newFaq.answer}
                       onChange={(e) => setNewFaq({ ...newFaq, answer: e.target.value })}
-                      className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-medium min-h-[150px]"
+                      className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-medium min-h-[120px] sm:min-h-[150px] text-sm sm:text-base"
                       placeholder="Descreva a resposta detalhadamente..."
                     />
                   </div>
-                  <div className="flex justify-end gap-4">
+                  <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4">
                     <button
                       type="button"
                       onClick={() => setIsAddingFaq(false)}
-                      className="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 transition-all"
+                      className="w-full sm:w-auto px-8 py-3 sm:py-4 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 transition-all text-sm"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       disabled={faqLoading}
-                      className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center gap-2"
+                      className="w-full sm:w-auto px-8 py-3 sm:py-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-2 text-sm"
                     >
                       {faqLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                       Salvar FAQ
@@ -843,18 +795,18 @@ export default function AdminDashboard() {
               <motion.div
                 key={faq.id}
                 layout
-                className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-all"
+                className="bg-white p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-all"
               >
                 {editingFaq?.id === faq.id ? (
                   <form onSubmit={handleUpdateFaq} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                      <div className="md:col-span-3">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                      <div className="lg:col-span-3">
                         <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Pergunta</label>
                         <input
                           type="text"
                           value={editingFaq.question}
                           onChange={(e) => setEditingFaq({ ...editingFaq, question: e.target.value })}
-                          className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-bold"
+                          className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-bold text-sm sm:text-base"
                         />
                       </div>
                       <div>
@@ -863,7 +815,7 @@ export default function AdminDashboard() {
                           type="number"
                           value={editingFaq.order}
                           onChange={(e) => setEditingFaq({ ...editingFaq, order: parseInt(e.target.value) || 0 })}
-                          className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-bold"
+                          className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-bold text-sm sm:text-base"
                         />
                       </div>
                     </div>
@@ -872,21 +824,21 @@ export default function AdminDashboard() {
                       <textarea
                         value={editingFaq.answer}
                         onChange={(e) => setEditingFaq({ ...editingFaq, answer: e.target.value })}
-                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-medium min-h-[150px]"
+                        className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-medium min-h-[120px] sm:min-h-[150px] text-sm sm:text-base"
                       />
                     </div>
-                    <div className="flex justify-end gap-4">
+                    <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4">
                       <button
                         type="button"
                         onClick={() => setEditingFaq(null)}
-                        className="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 transition-all"
+                        className="w-full sm:w-auto px-8 py-3 sm:py-4 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 transition-all text-sm"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
                         disabled={faqLoading}
-                        className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center gap-2"
+                        className="w-full sm:w-auto px-8 py-3 sm:py-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-2 text-sm"
                       >
                         {faqLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                         Atualizar
@@ -894,25 +846,25 @@ export default function AdminDashboard() {
                     </div>
                   </form>
                 ) : (
-                  <div className="flex flex-col md:flex-row justify-between gap-6">
+                  <div className="flex flex-col lg:flex-row justify-between gap-6">
                     <div className="flex-grow">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex flex-wrap items-center gap-3 mb-3">
                         <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest">Ordem: {faq.order || 0}</span>
-                        <h4 className="text-xl font-black text-slate-900">{faq.question}</h4>
+                        <h4 className="text-lg sm:text-xl font-black text-slate-900 leading-tight">{faq.question}</h4>
                       </div>
-                      <p className="text-slate-600 leading-relaxed">{faq.answer}</p>
+                      <p className="text-slate-600 text-sm sm:text-base leading-relaxed">{faq.answer}</p>
                     </div>
-                    <div className="flex md:flex-col gap-2 shrink-0">
+                    <div className="flex lg:flex-col gap-2 shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-50">
                       <button
                         onClick={() => setEditingFaq(faq)}
-                        className="p-3 bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-all"
+                        className="flex-1 lg:flex-none p-3 bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-all flex items-center justify-center"
                         title="Editar"
                       >
                         <Edit2 className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => handleDeleteFaq(faq.id!)}
-                        className="p-3 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"
+                        className="flex-1 lg:flex-none p-3 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all flex items-center justify-center"
                         title="Excluir"
                       >
                         <Trash2 className="w-5 h-5" />

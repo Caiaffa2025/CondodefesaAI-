@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useRef, useState, useEffect, lazy, Suspense } from 'react';
 import { cn } from '../lib/utils';
 import LoginModal from './LoginModal';
+import VisitorCounter from './VisitorCounter';
 
 const Pricing = lazy(() => import('./Pricing'));
 
@@ -114,6 +115,10 @@ export default function LandingPage({ user }: LandingPageProps) {
                 <Zap className="w-3.5 h-3.5 fill-current" />
                 Justiça Condominial em Tempo Real
               </motion.div>
+
+              <div className="mb-8">
+                <VisitorCounter />
+              </div>
 
               <h1 className="text-4xl xs:text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight text-slate-900 mb-6 leading-[1.1] sm:leading-[1.05]">
                 Seu condomínio está <br className="hidden sm:block" />

@@ -37,6 +37,8 @@ import FloatingSupport from './components/FloatingSupport';
 import Footer from './components/Footer';
 import { Toaster } from 'sonner';
 import { onForegroundMessage } from './lib/notifications';
+import { trackPageView, trackVisitorEntry } from './lib/analytics';
+import { useLocation } from 'react-router-dom';
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -61,10 +63,16 @@ const PageLoader = () => (
   </div>
 );
 
-export default function App() {
+function AppContent() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
+
+  // Track page views
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
 
   const refreshProfile = async () => {
     if (user) {
@@ -96,6 +104,12 @@ export default function App() {
       clearTimeout(timeout);
       setUser(firebaseUser);
       if (firebaseUser) {
+        // Track visitor entry once per session
+        if (!sessionStorage.getItem('visitor_tracked')) {
+          trackVisitorEntry(firebaseUser.isAnonymous);
+          sessionStorage.setItem('visitor_tracked', 'true');
+        }
+
         try {
           const docRef = doc(db, 'users', firebaseUser.uid);
           const docSnap = await getDoc(docRef);
@@ -155,90 +169,96 @@ export default function App() {
   }
 
   return (
+    <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
+      <Navbar user={user} profile={profile} />
+      <main className="flex-grow">
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<LandingPage user={user} />} />
+            <Route 
+              path="/dashboard" 
+              element={user ? <Dashboard user={user} profile={profile} /> : <Navigate to="/" />} 
+              />
+            <Route 
+              path="/analisar" 
+              element={user ? <AnalysisForm user={user} profile={profile} /> : <Navigate to="/" />} 
+              />
+            <Route 
+              path="/caso/:id" 
+              element={user ? <CaseDetail user={user} /> : <Navigate to="/" />} 
+              />
+            <Route 
+              path="/suporte" 
+              element={<Support />} 
+              />
+            <Route 
+              path="/sobre" 
+              element={<About />} 
+              />
+            <Route 
+              path="/termos" 
+              element={<TermsOfUse />} 
+              />
+            <Route 
+              path="/privacidade" 
+              element={<PrivacyPolicy />} 
+              />
+            <Route 
+              path="/quiz" 
+              element={<Quiz />} 
+              />
+            <Route 
+              path="/faq" 
+              element={<FAQ />} 
+              />
+            <Route 
+              path="/scanner" 
+              element={user ? <FineScanner /> : <Navigate to="/" />} 
+              />
+            <Route 
+              path="/calculadora" 
+              element={user ? <FinanceCalculator /> : <Navigate to="/" />} 
+              />
+            <Route 
+              path="/ata-digital" 
+              element={user ? <OccurrenceGenerator /> : <Navigate to="/" />} 
+              />
+            <Route 
+              path="/preventiva" 
+              element={user ? <PreventiveAnalysis profile={profile} /> : <Navigate to="/" />} 
+              />
+            <Route 
+              path="/documentos" 
+              element={user ? <MyDocuments profile={profile} onUpdateProfile={refreshProfile} /> : <Navigate to="/" />} 
+              />
+            <Route 
+              path="/admin" 
+              element={<AdminDashboard />} 
+              />
+            <Route 
+              path="/protecao" 
+              element={<Protection />} 
+              />
+            <Route 
+              path="/planos" 
+              element={<Pricing user={user} profile={profile} onUpdateProfile={refreshProfile} />} 
+              />
+          </Routes>
+        </Suspense>
+      </main>
+      <ScrollToTop />
+      <FloatingSupport user={user} profile={profile} />
+      <Footer />
+    </div>
+  );
+}
+
+export default function App() {
+  return (
     <QueryClientProvider client={queryClient}>
       <Toaster position="top-right" richColors />
       <Router>
-        <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
-          <Navbar user={user} profile={profile} />
-          <main className="flex-grow">
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/" element={<LandingPage user={user} />} />
-                <Route 
-                  path="/dashboard" 
-                  element={user ? <Dashboard user={user} profile={profile} /> : <Navigate to="/" />} 
-                  />
-                <Route 
-                  path="/analisar" 
-                  element={user ? <AnalysisForm user={user} profile={profile} /> : <Navigate to="/" />} 
-                  />
-                <Route 
-                  path="/caso/:id" 
-                  element={user ? <CaseDetail user={user} /> : <Navigate to="/" />} 
-                  />
-                <Route 
-                  path="/suporte" 
-                  element={<Support />} 
-                  />
-                <Route 
-                  path="/sobre" 
-                  element={<About />} 
-                  />
-                <Route 
-                  path="/termos" 
-                  element={<TermsOfUse />} 
-                  />
-                <Route 
-                  path="/privacidade" 
-                  element={<PrivacyPolicy />} 
-                  />
-                <Route 
-                  path="/quiz" 
-                  element={<Quiz />} 
-                  />
-                <Route 
-                  path="/faq" 
-                  element={<FAQ />} 
-                  />
-                <Route 
-                  path="/scanner" 
-                  element={user ? <FineScanner /> : <Navigate to="/" />} 
-                  />
-                <Route 
-                  path="/calculadora" 
-                  element={user ? <FinanceCalculator /> : <Navigate to="/" />} 
-                  />
-                <Route 
-                  path="/ata-digital" 
-                  element={user ? <OccurrenceGenerator /> : <Navigate to="/" />} 
-                  />
-                <Route 
-                  path="/preventiva" 
-                  element={user ? <PreventiveAnalysis profile={profile} /> : <Navigate to="/" />} 
-                  />
-                <Route 
-                  path="/documentos" 
-                  element={user ? <MyDocuments profile={profile} onUpdateProfile={refreshProfile} /> : <Navigate to="/" />} 
-                  />
-                <Route 
-                  path="/admin" 
-                  element={<AdminDashboard />} 
-                  />
-                <Route 
-                  path="/protecao" 
-                  element={<Protection />} 
-                  />
-                <Route 
-                  path="/planos" 
-                  element={<Pricing user={user} profile={profile} onUpdateProfile={refreshProfile} />} 
-                  />
-              </Routes>
-            </Suspense>
-          </main>
-          <ScrollToTop />
-          <FloatingSupport user={user} profile={profile} />
-          <Footer />
-        </div>
+        <AppContent />
       </Router>
     </QueryClientProvider>
   );
